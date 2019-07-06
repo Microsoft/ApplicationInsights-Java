@@ -84,6 +84,8 @@ public class ApplicationInsightsProperties {
 
   /** Heartbeat Properties container */
   private HeartBeat heartBeat = new HeartBeat();
+  /**Exceptions Properties container */
+  private Exceptions exceptions = new Exceptions();
 
   public boolean isEnabled() {
     return enabled;
@@ -173,6 +175,14 @@ public class ApplicationInsightsProperties {
 
   public void setHeartBeat(HeartBeat heartBeat) {
     this.heartBeat = heartBeat;
+  }
+
+  public Exceptions getExceptions() {
+    return exceptions;
+  }
+
+  public void setExceptions(Exceptions exceptions) {
+    this.exceptions = exceptions;
   }
 
   static class Channel {
@@ -545,6 +555,33 @@ public class ApplicationInsightsProperties {
 
     public void setJmxCounters(List<String> jmxCounters) {
       this.jmxCounters = jmxCounters;
+    }
+  }
+
+  static class Exceptions {
+    /**
+     * Maximum depth of exceptions graph
+     */
+    private Integer maxStackSize;
+    /**
+     * Maximum length of trace per exception
+     */
+    private Integer maxExceptionTraceLength;
+
+    public Integer getMaxStackSize() {
+      return maxStackSize;
+    }
+
+    public void setMaxStackSize(Integer maxStackSize) {
+      this.maxStackSize = maxStackSize;
+    }
+
+    public Integer getMaxExceptionTraceLength() {
+      return maxExceptionTraceLength;
+    }
+
+    public void setMaxExceptionTraceLength(Integer maxExceptionTraceLength) {
+      this.maxExceptionTraceLength = maxExceptionTraceLength;
     }
   }
 

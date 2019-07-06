@@ -138,5 +138,5 @@ public interface AgentNotificationsHandler {
 
     void exceptionThrown(Exception e);
 
-    void exceptionThrown(Exception e, int i);
+    void exceptionThrown(Exception e, Integer maxStackSize, Integer maxExceptionTraceLength);
 }

@@ -22,7 +22,6 @@
 package com.microsoft.applicationinsights.agent.internal.coresync.impl;
 
 import com.microsoft.applicationinsights.agent.internal.config.DataOfConfigurationForException;
-import junit.framework.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -65,7 +64,8 @@ public class RuntimeExceptionDeciderTest {
 
         assertNotNull(result);
         assertTrue(result.valid);
-        assertEquals(Integer.MAX_VALUE, result.stackSize);
+        assertNull(result.maxStackSize);
+        assertNull(result.maxExceptionTraceLength);
     }
 
     @Test
@@ -73,7 +73,7 @@ public class RuntimeExceptionDeciderTest {
         RuntimeExceptionDecider tested = new RuntimeExceptionDecider();
         DataOfConfigurationForException data = new DataOfConfigurationForException();
         data.setEnabled(true);
-        data.setStackSize(1);
+        data.setMaxStackSize(1);
         data.getSuppressedExceptions().add("java.lang.RuntimeException");
         tested.setExceptionData(data);
 
@@ -88,7 +88,7 @@ public class RuntimeExceptionDeciderTest {
         RuntimeExceptionDecider tested = new RuntimeExceptionDecider(false);
         DataOfConfigurationForException data = new DataOfConfigurationForException();
         data.setEnabled(true);
-        data.setStackSize(1);
+        data.setMaxStackSize(1);
         data.getSuppressedExceptions().add("aa.aa");
         tested.setExceptionData(data);
 
@@ -96,6 +96,6 @@ public class RuntimeExceptionDeciderTest {
 
         assertNotNull(result);
         assertTrue(result.valid);
-        assertEquals(1, result.stackSize);
+        assertEquals(1, (int)result.maxStackSize);
     }
 }

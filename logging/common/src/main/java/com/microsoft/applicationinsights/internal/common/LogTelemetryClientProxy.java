@@ -91,20 +91,18 @@ public class LogTelemetryClientProxy implements TelemetryClientProxy {
 
         Map<String, String> customParameters = event.getCustomParameters();
 
-        Telemetry telemetry;
+
         if (event.isException()) {
-            ExceptionTelemetry exceptionTelemetry = new ExceptionTelemetry(event.getException());
-            exceptionTelemetry.setSeverityLevel(event.getNormalizedSeverityLevel());
-            telemetry = exceptionTelemetry;
+            telemetryClient.trackException(event.getException(),
+                    event.getNormalizedSeverityLevel(),
+                    customParameters,
+                    null);
         } else {
-            TraceTelemetry traceTelemetry = new TraceTelemetry(formattedMessage);
-            traceTelemetry.setSeverityLevel(event.getNormalizedSeverityLevel());
-            telemetry = traceTelemetry;
+            TraceTelemetry telemetry = new TraceTelemetry(formattedMessage);
+            telemetry.setSeverityLevel(event.getNormalizedSeverityLevel());
+            telemetry.getContext().getProperties().putAll(customParameters);
+            telemetryClient.track(telemetry);
         }
-
-        telemetry.getContext().getProperties().putAll(customParameters);
-
-        telemetryClient.track(telemetry);
     }
 
     /**

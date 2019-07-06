@@ -267,7 +267,7 @@ public enum ImplementationsCoordinator implements AgentNotificationsHandler {
                 return;
             }
 
-            implementation.exceptionThrown(e, decision.stackSize);
+            implementation.exceptionThrown(e, decision.maxStackSize, decision.maxExceptionTraceLength);
 
         } catch (ThreadDeath td) {
         	throw td;
@@ -276,7 +276,7 @@ public enum ImplementationsCoordinator implements AgentNotificationsHandler {
     }
 
     @Override
-    public void exceptionThrown(Exception e, int i) {
+    public void exceptionThrown(Exception e, Integer i, Integer maxExceptionTraceLength) {
         throw new UnsupportedOperationException();
     }
 

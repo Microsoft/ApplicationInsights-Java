@@ -23,7 +23,9 @@ package com.microsoft.applicationinsights.agent.internal.config;
 
 import com.microsoft.applicationinsights.agent.internal.common.StringUtils;
 import com.microsoft.applicationinsights.internal.logger.InternalLogger;
+
 import java.util.HashSet;
+
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -31,19 +33,18 @@ import org.w3c.dom.NodeList;
 
 /**
  * The class fetches the data from the Agent's configuration file
- *
+ * <p>
  * Created by gupele on 8/17/2016.
  */
 final class ConfigRuntimeExceptionDataBuilder {
 
-    private final static int MAX_STACK_SIZE = Integer.MAX_VALUE;
-
-    private final static String FULL_STACK_SIZE_NAME_VALUE = "FULL";
+    private final static String FULL_VALUE = "FULL";
 
     private final static String NAME_ATTRIBUTE = "name";
     private final static String SUPPRESS_TAG = "Suppress";
     private final static String VALID_TAG = "Valid";
     private final static String MAX_STACK_SIZE_ATTRIBUTE = "stackSize";
+    private final static String MAX_EXCEPTION_TRACE_LENGTH_ATTRIBUTE = "exceptionTraceLength";
     private final static String RUNTIME_EXCEPTION_TAG = "RuntimeException";
 
     public void setRuntimeExceptionData(Element enclosingTag, AgentBuiltInConfigurationBuilder builtInConfigurationBuilder) {
@@ -89,26 +90,30 @@ final class ConfigRuntimeExceptionDataBuilder {
     }
 
     private void FetchStackSize(Element rtExceptionElement, DataOfConfigurationForException data) {
-        int stackSize = MAX_STACK_SIZE;
+        data.setMaxStackSize(fetchInteger(rtExceptionElement, MAX_STACK_SIZE_ATTRIBUTE));
+        data.setMaxExceptionTraceLength(fetchInteger(rtExceptionElement, MAX_EXCEPTION_TRACE_LENGTH_ATTRIBUTE));
+    }
 
-        String maxStackSizeAsString = rtExceptionElement.getAttribute(MAX_STACK_SIZE_ATTRIBUTE);
-        if (StringUtils.isNullOrEmpty(maxStackSizeAsString)) {
-            data.setStackSize(stackSize);
-            return;
+    static Integer fetchInteger(Element rtExceptionElement, String attributeName) {
+
+        String stringValue = rtExceptionElement.getAttribute(attributeName);
+        if (StringUtils.isNullOrEmpty(stringValue)) {
+            return null;
         }
 
-        String preparedValue = maxStackSizeAsString.trim().toUpperCase();
-        if (!FULL_STACK_SIZE_NAME_VALUE.equals(preparedValue)) {
-            try {
-                int maxStackSize = Integer.parseInt(preparedValue);
-                stackSize = maxStackSize;
-            } catch (Exception e) {
-                InternalLogger.INSTANCE.error("Failed to parse attribute %s with value %s, will send full stack" +
-                        "exception : %s", MAX_STACK_SIZE, maxStackSizeAsString, ExceptionUtils.getStackTrace(e));
-            }
+        String preparedValue = stringValue.trim().toUpperCase();
+        if (FULL_VALUE.equals(preparedValue)) {
+            return Integer.MAX_VALUE;
         }
-
-        data.setStackSize(stackSize);
+        Integer result;
+        try {
+            result = Integer.parseInt(preparedValue);
+        } catch (Exception e) {
+            InternalLogger.INSTANCE.error("Failed to parse attribute %s with value %s, will send full stack" +
+                    "exception : %s", null, stringValue, ExceptionUtils.getStackTrace(e));
+            result = null;
+        }
+        return result;
     }
 
     private HashSet<String> fetchSet(Element rtExceptionElement, String tagName) {
@@ -123,7 +128,7 @@ final class ConfigRuntimeExceptionDataBuilder {
                         continue;
                     }
 
-                    Element suppressElement = (Element)suppressNode;
+                    Element suppressElement = (Element) suppressNode;
 
                     String exceptionName = suppressElement.getAttribute(NAME_ATTRIBUTE);
                     if (!StringUtils.isNullOrEmpty(exceptionName)) {

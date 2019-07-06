@@ -103,7 +103,7 @@ public class TelemetryClient {
     }
 
     /**
-     * Checks whether tracking is enabled. 
+     * Checks whether tracking is enabled.
      * @return 'true' if tracking is disabled, 'false' otherwise.
      */
     public boolean isDisabled() {
@@ -184,7 +184,7 @@ public class TelemetryClient {
     }
 
     /**
-     * Sends a TraceTelemetry record to Application Insights. Appears in "traces" in Analytics and Search. 
+     * Sends a TraceTelemetry record to Application Insights. Appears in "traces" in Analytics and Search.
      * @param message A log message. Max length 10000.
      */
     public void trackTrace(String message) {
@@ -192,7 +192,7 @@ public class TelemetryClient {
     }
 
     /**
-     * Sends a TraceTelemetry record. Appears in "traces" in Analytics and Search. 
+     * Sends a TraceTelemetry record. Appears in "traces" in Analytics and Search.
      * @param message A log message. Max length 10000.
      * @param severityLevel The severity level.
      */
@@ -274,25 +274,45 @@ public class TelemetryClient {
      * @param properties Named string values you can use to search and classify trace messages.
      * @param metrics Measurements associated with this exception event. Appear in "custom metrics" in Metrics Explorer.
      */
-    public void trackException(Exception exception, Map<String, String> properties, Map<String, Double> metrics) {
-        if (isDisabled()) {
-            return;
-        }
-
-        ExceptionTelemetry et = new ExceptionTelemetry(exception);
-
-        MapUtil.copy(properties, et.getContext().getProperties());
-        MapUtil.copy(metrics, et.getMetrics());
-
-        this.track(et);
+    public void trackException(Throwable exception, Map<String, String> properties,
+                               Map<String, Double> metrics) {
+        trackException(exception, SeverityLevel.Error, properties, metrics);
     }
 
     /**
      * Sends an exception record to Application Insights. Appears in "exceptions" in Analytics and Search.
      * @param exception The exception to log information about.
+     * @param severityLevel Severity level of the event
+     * @param properties Named string values you can use to search and classify trace messages.
+     * @param metrics Measurements associated with this exception event. Appear in "custom metrics" in Metrics Explorer.
      */
-    public void trackException(Exception exception) {
-        trackException(exception, null, null);
+    public void trackException(Throwable exception, SeverityLevel severityLevel,
+                               Map<String, String> properties,
+                               Map<String, Double> metrics) {
+        if (isDisabled()) {
+            return;
+        }
+
+        ExceptionTelemetry et = new ExceptionTelemetry(exception, configuration.getExceptionTelemetryOptions());
+
+        MapUtil.copy(properties, et.getContext().getProperties());
+        MapUtil.copy(metrics, et.getMetrics());
+
+        et.setSeverityLevel(severityLevel);
+        this.track(et);
+    }
+
+    public void trackException(Throwable exception) {
+        trackException(exception, null, null, null);
+    }
+
+    /**
+     * Sends an exception record to Application Insights. Appears in "exceptions" in Analytics and Search.
+     * @param exception The exception to log information about.
+     * @param severityLevel Severity level of the event
+     */
+    public void trackException(Throwable exception, SeverityLevel severityLevel) {
+        trackException(exception, severityLevel, null, null);
     }
 
     /**
@@ -304,7 +324,7 @@ public class TelemetryClient {
     }
 
     /**
-     * Sends a request record to Application Insights. Appears in "requests" in Search and Analytics, 
+     * Sends a request record to Application Insights. Appears in "requests" in Search and Analytics,
      * and contributes to metric charts such as Server Requests, Server Response Time, Failed Requests.
      * @param name A user-friendly name for the request or operation.
      * @param timestamp The time of the request.
@@ -356,7 +376,7 @@ public class TelemetryClient {
     }
 
     /**
-     * Sends a page view record to Application Insights. Appears in "page views" in Search and Analytics, 
+     * Sends a page view record to Application Insights. Appears in "page views" in Search and Analytics,
      * and contributes to metric charts such as Page View Load Time.
      @param name The name of the page.
      */

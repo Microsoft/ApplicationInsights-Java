@@ -29,6 +29,7 @@ import java.util.Map;
 import com.microsoft.applicationinsights.telemetry.Telemetry;
 import com.microsoft.applicationinsights.TelemetryClient;
 import com.microsoft.applicationinsights.internal.common.ApplicationInsightsEvent;
+import com.microsoft.applicationinsights.telemetry.SeverityLevel;
 import com.microsoft.applicationinsights.telemetry.ExceptionTelemetry;
 import com.microsoft.applicationinsights.telemetry.TelemetryContext;
 import com.microsoft.applicationinsights.telemetry.TraceTelemetry;
@@ -49,6 +50,7 @@ public class LogTelemetryClientProxyTests {
     private LogTelemetryClientProxy telemetryClientProxy;
     private TelemetryClient telemetryClientMock;
     private List<Telemetry> telemetriesSent;
+    private List<Exception> exceptionsSent;
 
     // endregion Members
 
@@ -58,7 +60,8 @@ public class LogTelemetryClientProxyTests {
     public void before() {
         this.telemetryClientMock = Mockito.mock(TelemetryClient.class);
         this.telemetriesSent = new LinkedList<Telemetry>();
-        setupTelemetryClientMock(this.telemetriesSent);
+        this.exceptionsSent = new LinkedList<Exception>();
+        setupTelemetryClientMock();
         this.telemetryClientProxy = new LogTelemetryClientProxy(telemetryClientMock, INSTRUMENTATION_KEY);
     }
 
@@ -68,23 +71,19 @@ public class LogTelemetryClientProxyTests {
 
     @Test
     public void testExceptionIsClassifiedAndSentCorrectly() {
-        Telemetry telemetry = sendAIEventAndGetOutputTelemetry(true);
+        sendAIEventAndGetOutputTelemetry(true);
 
-        Assert.assertTrue("Exception telemetry should be sent.", telemetry instanceof ExceptionTelemetry);
+        Assert.assertEquals(0, telemetriesSent.size());
+        Assert.assertEquals("Exactly one exception should be sent.", 1, exceptionsSent.size());
     }
 
     @Test
     public void testTraceIsClassifiedAndSentCorrectly() {
-        Telemetry telemetry = sendAIEventAndGetOutputTelemetry(false);
+        sendAIEventAndGetOutputTelemetry(false);
 
-        Assert.assertTrue("Exactly one Trace telemetry should be sent.", telemetry instanceof TraceTelemetry);
-    }
-
-    @Test
-    public void testTraceIsClassifiedAndSentCorrectlyWithLogLevel() {
-        Telemetry telemetry = sendAIEventAndGetOutputTelemetry(false);
-
-        Assert.assertTrue("Exactly one Trace telemetry should be sent.", telemetry instanceof TraceTelemetry);
+        Assert.assertEquals(1, telemetriesSent.size());
+        Assert.assertEquals(0, exceptionsSent.size());
+        Assert.assertTrue("Exception telemetry should be sent.", telemetriesSent.get(0) instanceof TraceTelemetry);
     }
 
     @Test
@@ -111,10 +110,10 @@ public class LogTelemetryClientProxyTests {
 
     @Test
     public void testCustomParametersAddedByTelemetryClientProxy() {
-        Telemetry telemetry = sendAIEventAndGetOutputTelemetry(false);
+        sendAIEventAndGetOutputTelemetry(false);
 
         // TODO: should custom parameters validated one-by-one for values?
-        Map<String, String> customParameters = telemetry.getContext().getProperties();
+        Map<String, String> customParameters = this.telemetriesSent.get(0).getContext().getProperties();
 
         Assert.assertTrue("Custom parameters list shouldn't be empty.", customParameters.size() > 0);
     }
@@ -123,10 +122,8 @@ public class LogTelemetryClientProxyTests {
 
     // region Private methods
 
-    private Telemetry sendAIEventAndGetOutputTelemetry(boolean isExceptionEvent) {
+    private void sendAIEventAndGetOutputTelemetry(boolean isExceptionEvent) {
         this.telemetryClientProxy.sendEvent(createApplicationInsightEvent(isExceptionEvent));
-
-        return this.telemetriesSent.get(0);
     }
 
     private void initializeTelemetryClientProxyWithInstrumentationKeyAndVerifyInitialization(String key) {
@@ -144,17 +141,29 @@ public class LogTelemetryClientProxyTests {
         return event;
     }
 
-    private void setupTelemetryClientMock(final List<Telemetry> telemetries) {
+    private void setupTelemetryClientMock() {
         Mockito.when(this.telemetryClientMock.getContext()).thenReturn(new TelemetryContext());
         Mockito.doAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {
                 Telemetry telemetry = ((Telemetry) invocation.getArguments()[0]);
-                telemetries.add(telemetry);
+                telemetriesSent.add(telemetry);
 
                 return null;
             }
         }).when(this.telemetryClientMock).track(Matchers.any(Telemetry.class));
+
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                Exception e = ((Exception) invocation.getArguments()[0]);
+                exceptionsSent.add(e);
+
+                return null;
+            }
+        }).when(this.telemetryClientMock).trackException(Matchers.any(Exception.class),
+                Matchers.any(SeverityLevel.class), Matchers.anyMapOf(String.class, String.class),
+                Matchers.anyMapOf(String.class, Double.class));
     }
 
      // endregion Private methods

@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentMap;
  * Telemetry type used to track exceptions sent to Azure Application Insights.
  */
 public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<ExceptionData> {
+
     private Double samplingPercentage;
     private final ExceptionData data;
     private Throwable throwable;
@@ -57,22 +58,28 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
         initialize(data.getProperties());
     }
 
-    /**
-     * Initializes a new instance.
-     * @param stackSize The max stack size to report.
-     * @param exception The exception to track.
-     */
-    public ExceptionTelemetry(Throwable exception, int stackSize) {
-        this();
-        setException(exception, stackSize);
+    public ExceptionTelemetry(Throwable exception) {
+        this(exception, null);
     }
 
     /**
      * Initializes a new instance.
-     * @param exception The exception to track.
+     * @param maxStackSize The max stack size to report.
+     * @param throwable The throwable to track.
      */
-    public ExceptionTelemetry(Throwable exception) {
-        this(exception, Integer.MAX_VALUE);
+    public ExceptionTelemetry(Throwable throwable, int maxStackSize) {
+        this(throwable, new ExceptionTelemetryOptions(maxStackSize, null));
+    }
+
+    /**
+     * Initializes a new instance.
+     *
+     * @param options   restrictions in throwable size to report
+     * @param throwable The throwable to track.
+     */
+    public ExceptionTelemetry(Throwable throwable, ExceptionTelemetryOptions options) {
+        this();
+        updateException(throwable, options != null ? options : ExceptionTelemetryOptions.empty());
     }
 
     @Override
@@ -81,7 +88,7 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
     }
 
     public Exception getException() {
-        return throwable instanceof Exception ? (Exception)throwable : null;
+        return throwable instanceof Exception ? (Exception) throwable : null;
     }
 
     public Throwable getThrowable() {
@@ -89,18 +96,16 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
     }
 
     public void setException(Throwable throwable) {
-        setException(throwable, Integer.MAX_VALUE);
+        setException(throwable, null);
     }
 
-    public void setException(Throwable throwable, int stackSize) {
-        this.throwable = throwable;
-        updateException(throwable, stackSize);
+    public void setException(Throwable throwable, Integer maxStackSize) {
+        updateException(throwable, new ExceptionTelemetryOptions(maxStackSize, null));
     }
 
     /**
-     * @deprecated
-     * Gets the value indicated where the exception was handled.
      * @return The value indicating the exception
+     * @deprecated Gets the value indicated where the exception was handled.
      */
     @Deprecated
     public ExceptionHandledAt getExceptionHandledAt() {
@@ -108,9 +113,8 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
     }
 
     /**
-     * @deprecated
-     * Sets the value indicated where the exception was handled.
      * @param value The value indicating the exception
+     * @deprecated Sets the value indicated where the exception was handled.
      */
     @Deprecated
     public void setExceptionHandledAt(ExceptionHandledAt value) {
@@ -118,11 +122,12 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
     }
 
     /**
-     * Gets a map of application-defined exception metrics. 
+     * Gets a map of application-defined exception metrics.
      * The metrics appear along with the exception in Analytics, but under Custom Metrics in Metrics Explorer.
+     *
      * @return The map of metrics
      */
-    public ConcurrentMap<String,Double> getMetrics() {
+    public ConcurrentMap<String, Double> getMetrics() {
         return data.getMeasurements();
     }
 
@@ -159,31 +164,37 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
         return data.getExceptions();
     }
 
-    private void updateException(Throwable throwable, int stackSize) {
+    private void updateException(Throwable throwable, ExceptionTelemetryOptions options) {
+        this.throwable = throwable;
         ArrayList<ExceptionDetails> exceptions = new ArrayList<ExceptionDetails>();
-        convertExceptionTree(throwable, null, exceptions, stackSize);
+        convertExceptionTree(throwable, null, exceptions, options.getMaxStackSize(), options.getMaxExceptionTraceLength());
 
         data.setExceptions(exceptions);
     }
 
-    private static void convertExceptionTree(Throwable exception, ExceptionDetails parentExceptionDetails, List<ExceptionDetails> exceptions, int stackSize) {
+    private static void convertExceptionTree(Throwable exception, ExceptionDetails parentExceptionDetails,
+                                             List<ExceptionDetails> exceptions,
+                                             int maxStackSize,
+                                             int maxExceptionTraceLength) {
         if (exception == null) {
             exception = new Exception("");
         }
 
-        if (stackSize == 0) {
+        if (maxStackSize == 0) {
             return;
         }
 
-        ExceptionDetails exceptionDetails = createWithStackInfo(exception, parentExceptionDetails);
+        ExceptionDetails exceptionDetails = createWithStackInfo(exception, parentExceptionDetails, maxExceptionTraceLength);
         exceptions.add(exceptionDetails);
 
         if (exception.getCause() != null) {
-            convertExceptionTree(exception.getCause(), exceptionDetails, exceptions, stackSize - 1);
+            convertExceptionTree(exception.getCause(), exceptionDetails, exceptions, maxStackSize - 1, maxExceptionTraceLength);
         }
     }
 
-    private static ExceptionDetails createWithStackInfo(Throwable exception, ExceptionDetails parentExceptionDetails) {
+    private static ExceptionDetails createWithStackInfo(Throwable exception,
+                                                        ExceptionDetails parentExceptionDetails,
+                                                        int maxExceptionTraceLength) {
         if (exception == null) {
             throw new IllegalArgumentException("exception cannot be null");
         }
@@ -209,7 +220,8 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
 
             // We need to present the stack trace in reverse order.
 
-            for (int idx = 0; idx < trace.length; idx++) {
+            int length = Math.min(trace.length, maxExceptionTraceLength);
+            for (int idx = 0; idx < length; idx++) {
                 StackTraceElement elem = trace[idx];
 
                 if (elem.isNativeMethod()) {
@@ -225,8 +237,7 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
 
                 if (!Strings.isNullOrEmpty(className)) {
                     frame.setMethod(elem.getClassName() + "." + elem.getMethodName());
-                }
-                else {
+                } else {
                     frame.setMethod(elem.getMethodName());
                 }
 
@@ -238,6 +249,7 @@ public final class ExceptionTelemetry extends BaseSampleSourceTelemetry<Exceptio
 
         return exceptionDetails;
     }
+
     @Override
     public String getEnvelopName() {
         return ENVELOPE_NAME;

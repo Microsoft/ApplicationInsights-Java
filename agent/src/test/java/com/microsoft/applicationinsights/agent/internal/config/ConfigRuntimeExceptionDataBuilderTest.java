@@ -47,6 +47,7 @@ public class ConfigRuntimeExceptionDataBuilderTest {
 
         final Element exceptionTag = createMockElement("enabled", "true");
         addAttribute(exceptionTag, "stackSize", " 1 ");
+        addAttribute(exceptionTag, "exceptionTraceLength", " 2 ");
         addMockNodeList(exceptionTag, "Suppress", suppressedNodeList);
         addMockNodeList(exceptionTag, "Valid", validNodeList);
 
@@ -75,7 +76,8 @@ public class ConfigRuntimeExceptionDataBuilderTest {
         Assert.assertEquals(exceptionData.getValidPathForExceptions().size(), 1);
         Assert.assertEquals(exceptionData.getValidPathForExceptions().iterator().next(), "bb.bb");
 
-        Assert.assertEquals(exceptionData.getStackSize(), 1);
+        Assert.assertEquals(1, (int)exceptionData.getMaxStackSize());
+        Assert.assertEquals(2, (int)exceptionData.getMaxExceptionTraceLength());
     }
 
     @Test
@@ -122,6 +124,25 @@ public class ConfigRuntimeExceptionDataBuilderTest {
         Assert.assertNotNull(exceptionData);
 
         Assert.assertFalse(exceptionData.isEnabled());
+    }
+
+    @Test
+    public void fetchIntTest(){
+        Element element = createMockElement("i", "3");
+        Integer i = ConfigRuntimeExceptionDataBuilder.fetchInteger(element, "i");
+        Assert.assertEquals(3, (int)i);
+
+        element = createMockElement("i", "");
+        i = ConfigRuntimeExceptionDataBuilder.fetchInteger(element, "i");
+        Assert.assertNull(i);
+
+        element = createMockElement("i", "FuLL ");
+        i = ConfigRuntimeExceptionDataBuilder.fetchInteger(element, "i");
+        Assert.assertEquals(Integer.MAX_VALUE, (int)i);
+
+        element = createMockElement("i", "NotAnInt");
+        i = ConfigRuntimeExceptionDataBuilder.fetchInteger(element, "i");
+        Assert.assertNull(i);
     }
 
     private static Element createMockElement(String attributeName, final String attributeValue) {

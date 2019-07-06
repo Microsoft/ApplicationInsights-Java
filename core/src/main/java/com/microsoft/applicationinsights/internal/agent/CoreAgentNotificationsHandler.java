@@ -31,6 +31,7 @@ import com.microsoft.applicationinsights.internal.util.LocalStringsUtils;
 import com.microsoft.applicationinsights.internal.util.ThreadLocalCleaner;
 import com.microsoft.applicationinsights.telemetry.Duration;
 import com.microsoft.applicationinsights.telemetry.ExceptionTelemetry;
+import com.microsoft.applicationinsights.telemetry.ExceptionTelemetryOptions;
 import com.microsoft.applicationinsights.telemetry.RemoteDependencyTelemetry;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -258,8 +259,7 @@ final class CoreAgentNotificationsHandler implements AgentNotificationsHandler {
 
         telemetryClient.track(telemetry);
         if (throwable != null) {
-            ExceptionTelemetry exceptionTelemetry = new ExceptionTelemetry(throwable);
-            telemetryClient.track(exceptionTelemetry);
+            telemetryClient.trackException(throwable);
         }
     }
 
@@ -269,7 +269,7 @@ final class CoreAgentNotificationsHandler implements AgentNotificationsHandler {
     }
 
     @Override
-    public void exceptionThrown(Exception e, int stackSize) {
+    public void exceptionThrown(Exception e, Integer maxStackSize, Integer maxExceptionTraceLength) {
         ThreadData localData = threadDataThreadLocal.get();
         MethodData methodData = null;
         try {
@@ -288,7 +288,8 @@ final class CoreAgentNotificationsHandler implements AgentNotificationsHandler {
             methodData.name = EXCEPTION_THROWN_ID;
             localData.methods.addFirst(methodData);
 
-            ExceptionTelemetry et = new ExceptionTelemetry(e, stackSize);
+            ExceptionTelemetry et = new ExceptionTelemetry(e,
+                    new ExceptionTelemetryOptions(maxStackSize, maxExceptionTraceLength));
 
             telemetryClient.track(et);
         } catch (ThreadDeath td) {
@@ -431,8 +432,7 @@ final class CoreAgentNotificationsHandler implements AgentNotificationsHandler {
 
         telemetryClient.track(telemetry);
         if (throwable != null) {
-            ExceptionTelemetry exceptionTelemetry = new ExceptionTelemetry(throwable);
-            telemetryClient.track(exceptionTelemetry);
+            telemetryClient.trackException(throwable);
         }
     }
 
@@ -450,8 +450,7 @@ final class CoreAgentNotificationsHandler implements AgentNotificationsHandler {
             telemetry.setTimestamp(dependencyStartDate);
             telemetryClient.trackDependency(telemetry);
             if (throwable != null) {
-                ExceptionTelemetry exceptionTelemetry = new ExceptionTelemetry(throwable);
-                telemetryClient.track(exceptionTelemetry);
+                telemetryClient.trackException(throwable);
             }
         }
     }
@@ -507,8 +506,7 @@ final class CoreAgentNotificationsHandler implements AgentNotificationsHandler {
             telemetryClient.track(telemetry);
             if (throwable != null) {
                 InternalLogger.INSTANCE.trace("Sending Sql exception");
-                ExceptionTelemetry exceptionTelemetry = new ExceptionTelemetry(throwable);
-                telemetryClient.track(exceptionTelemetry);
+                telemetryClient.trackException(throwable);
             }
         } catch (ThreadDeath td) {
             throw td;

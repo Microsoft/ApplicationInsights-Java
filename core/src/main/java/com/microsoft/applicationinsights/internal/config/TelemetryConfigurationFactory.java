@@ -57,6 +57,7 @@ import com.microsoft.applicationinsights.internal.processor.TelemetryEventFilter
 import com.microsoft.applicationinsights.internal.processor.TraceTelemetryFilter;
 import com.microsoft.applicationinsights.internal.quickpulse.QuickPulse;
 import com.microsoft.applicationinsights.internal.util.LocalStringsUtils;
+import com.microsoft.applicationinsights.telemetry.ExceptionTelemetryOptions;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 /**
@@ -139,6 +140,18 @@ public enum TelemetryConfigurationFactory {
                 InternalLogger.INSTANCE.warn("No channel was initialized. A channel must be set before telemetry tracking will operate correctly.");
             }
             configuration.setTrackingIsDisabled(applicationInsightsConfig.isDisableTelemetry());
+            ExceptionsXmlElement exceptionsConfig = applicationInsightsConfig.getExceptions();
+            ExceptionTelemetryOptions options;
+            if (exceptionsConfig != null) {
+                options = new ExceptionTelemetryOptions(
+                        exceptionsConfig.getMaxStackSize(),
+                        exceptionsConfig.getMaxExceptionTraceLength()
+                );
+            }else{
+                options = ExceptionTelemetryOptions.empty();
+            }
+            configuration.setExceptionTelemetryOptions(options);
+            InternalLogger.INSTANCE.trace("Exception Handling Options: %s", options);
 
             setContextInitializers(applicationInsightsConfig.getContextInitializers(), configuration);
             setTelemetryInitializers(applicationInsightsConfig.getTelemetryInitializers(), configuration);

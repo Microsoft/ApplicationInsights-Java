@@ -28,16 +28,25 @@ import java.util.HashSet;
  */
 public final class DataOfConfigurationForException {
     private boolean enabled = false;
-    private int stackSize = Integer.MAX_VALUE;
+    private Integer maxStackSize;
+    private Integer maxExceptionTraceLength;
     private HashSet<String> suppressedExceptions = new HashSet<String>();
     private HashSet<String> validPathForExceptions = new HashSet<String>();
 
-    public int getStackSize() {
-        return stackSize;
+    public Integer getMaxStackSize() {
+        return maxStackSize;
     }
 
-    public void setStackSize(int stackSize) {
-        this.stackSize = stackSize;
+    public void setMaxStackSize(Integer maxStackSize) {
+        this.maxStackSize = maxStackSize;
+    }
+
+    public Integer getMaxExceptionTraceLength() {
+        return maxExceptionTraceLength;
+    }
+
+    public void setMaxExceptionTraceLength(Integer maxExceptionTraceLength) {
+        this.maxExceptionTraceLength = maxExceptionTraceLength;
     }
 
     public HashSet<String> getSuppressedExceptions() {

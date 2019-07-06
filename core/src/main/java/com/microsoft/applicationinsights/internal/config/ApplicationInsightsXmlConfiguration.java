@@ -43,6 +43,7 @@ public class ApplicationInsightsXmlConfiguration {
     private SDKLoggerXmlElement sdkLogger;
     private SamplerXmlElement sampler;
     private QuickPulseXmlElement quickPulse;
+    private ExceptionsXmlElement exceptions;
 
     private String schemaVersion;
 
@@ -137,6 +138,15 @@ public class ApplicationInsightsXmlConfiguration {
     @XmlElement(name="DisableTelemetry")
     public void setDisableTelemetry(boolean disableTelemetry) {
         this.disableTelemetry = disableTelemetry;
+    }
+
+    public ExceptionsXmlElement getExceptions() {
+        return exceptions;
+    }
+
+    @XmlElement(name="Exceptions")
+    public void setExceptions(ExceptionsXmlElement exceptions) {
+        this.exceptions = exceptions;
     }
 
     public TelemetryModulesXmlElement getModules() {
