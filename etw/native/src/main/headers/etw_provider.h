@@ -30,13 +30,17 @@
 
 TRACELOGGING_DECLARE_PROVIDER(provider_EtwHandle);
 
-#define EVENT_NAME "WebAppsAppInsightsExtension"
+#define VERBOSE_EVENT_NAME "Verbose"
+#define INFO_EVENT_NAME "Trace"
+#define WARN_EVENT_NAME "Warn"
+#define ERROR_EVENT_NAME "Error"
+#define CRITICAL_EVENT_NAME "Critical"
 
-#define WRITE_VERBOSE_EVENT(...) TraceLoggingWrite(provider_EtwHandle, EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_VERBOSE), __VA_ARGS__)
-#define WRITE_INFO_EVENT(...) TraceLoggingWrite(provider_EtwHandle, EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_INFO), __VA_ARGS__)
-#define WRITE_WARN_EVENT(...) TraceLoggingWrite(provider_EtwHandle, EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_WARNING), __VA_ARGS__)
-#define WRITE_ERROR_EVENT(...) TraceLoggingWrite(provider_EtwHandle, EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_ERROR), __VA_ARGS__)
-#define WRITE_CRITICAL_EVENT(...) TraceLoggingWrite(provider_EtwHandle, EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_CRITICAL), __VA_ARGS__)
+#define WRITE_VERBOSE_EVENT(...) TraceLoggingWrite(provider_EtwHandle, VERBOSE_EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_VERBOSE), __VA_ARGS__)
+#define WRITE_INFO_EVENT(...) TraceLoggingWrite(provider_EtwHandle, INFO_EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_INFO), __VA_ARGS__)
+#define WRITE_WARN_EVENT(...) TraceLoggingWrite(provider_EtwHandle, WARN_EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_WARNING), __VA_ARGS__)
+#define WRITE_ERROR_EVENT(...) TraceLoggingWrite(provider_EtwHandle, ERROR_EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_ERROR), __VA_ARGS__)
+#define WRITE_CRITICAL_EVENT(...) TraceLoggingWrite(provider_EtwHandle, CRITICAL_EVENT_NAME, TraceLoggingLevel(WINEVENT_LEVEL_CRITICAL), __VA_ARGS__)
 
 typedef int aijnierr_t;
 
