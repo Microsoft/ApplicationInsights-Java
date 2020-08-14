@@ -21,10 +21,15 @@
 
 package com.microsoft.applicationinsights.log4j.v2.internal;
 
+import com.microsoft.applicationinsights.log4j.v2.ApplicationInsightsAppender;
 import com.microsoft.applicationinsights.telemetry.SeverityLevel;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.ThrowableProxy;
 import org.apache.logging.log4j.message.Message;
@@ -77,7 +82,14 @@ public final class ApplicationInsightsLogEventTest {
                 return level;
             }
         };
-        ApplicationInsightsLogEvent event = new ApplicationInsightsLogEvent(logEvent);
+
+        Logger logger = LogManager.getRootLogger();
+        org.apache.logging.log4j.core.Logger coreLogger = (org.apache.logging.log4j.core.Logger)logger;
+
+        Map<String, Appender> appenderMap = coreLogger.getAppenders();
+        ApplicationInsightsAppender appender = (ApplicationInsightsAppender) appenderMap.get("test");
+
+        ApplicationInsightsLogEvent event = new ApplicationInsightsLogEvent(logEvent,appender.getLayout());
 
         assertEquals(expected, event.getNormalizedSeverityLevel());
     }

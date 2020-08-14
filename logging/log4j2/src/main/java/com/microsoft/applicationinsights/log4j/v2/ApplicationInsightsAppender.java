@@ -191,7 +191,8 @@ public class ApplicationInsightsAppender extends AbstractAppender {
         }
 
         try {
-            ApplicationInsightsLogEvent aiEvent = new ApplicationInsightsLogEvent(event);
+            //Formats a logging event using the layout
+            ApplicationInsightsLogEvent aiEvent = new ApplicationInsightsLogEvent(event,getLayout());
             this.telemetryClientProxy.sendEvent(aiEvent);
         } catch (Exception e) {
             // Appender failure must not fail the running application.

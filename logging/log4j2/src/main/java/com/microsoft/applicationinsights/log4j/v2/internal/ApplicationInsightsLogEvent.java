@@ -21,29 +21,33 @@
 
 package com.microsoft.applicationinsights.log4j.v2.internal;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import com.microsoft.applicationinsights.internal.common.ApplicationInsightsEvent;
 import com.microsoft.applicationinsights.internal.logger.InternalLogger;
 import com.microsoft.applicationinsights.telemetry.SeverityLevel;
+
+import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.spi.StandardLevel;
 
 public final class ApplicationInsightsLogEvent extends ApplicationInsightsEvent {
 
     private LogEvent logEvent;
+    private Layout<? extends Serializable> layout;
 
-    public ApplicationInsightsLogEvent(LogEvent logEvent) {
+    public ApplicationInsightsLogEvent(LogEvent logEvent, Layout<? extends Serializable> layout) {
         this.logEvent = logEvent;
+        this.layout = layout;
     }
 
     @Override
     public String getMessage() {
-        String message = this.logEvent.getMessage() != null ?
-                this.logEvent.getMessage().getFormattedMessage() :
-                "Log4j Trace";
-
-        return message;
+        // Serializes the given event using the appender's layout if present.
+        return layout != null ? layout.toSerializable(logEvent).toString() :
+                logEvent.getMessage() != null ? logEvent.getMessage().getFormattedMessage() :
+                    "Log4j Trace";
     }
 
     @Override
