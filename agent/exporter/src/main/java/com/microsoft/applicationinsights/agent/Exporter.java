@@ -324,9 +324,10 @@ public class Exporter implements SpanExporter {
 
         TraceTelemetry telemetry = new TraceTelemetry(message, toSeverityLevel(level));
 
-        if (SpanId.isValid(span.getParentSpanId())) {
-            telemetry.getContext().getOperation().setId(span.getTraceId());
-            telemetry.getContext().getOperation().setParentId(span.getParentSpanId());
+        telemetry.getContext().getOperation().setId(span.getTraceId());
+        String parentSpanId = span.getParentSpanId();
+        if (SpanId.isValid(parentSpanId)) {
+            telemetry.getContext().getOperation().setParentId(parentSpanId);
         }
 
         setLoggerProperties(telemetry.getProperties(), level, loggerName);
@@ -346,9 +347,10 @@ public class Exporter implements SpanExporter {
 
         telemetry.setTimestamp(new Date());
 
-        if (SpanId.isValid(span.getParentSpanId())) {
-            telemetry.getContext().getOperation().setId(span.getTraceId());
-            telemetry.getContext().getOperation().setParentId(span.getParentSpanId());
+        telemetry.getContext().getOperation().setId(span.getTraceId());
+        String parentSpanId = span.getParentSpanId();
+        if (SpanId.isValid(parentSpanId)) {
+            telemetry.getContext().getOperation().setParentId(parentSpanId);
         }
 
         telemetry.getData().setExceptions(Exceptions.minimalParse(errorStack));
