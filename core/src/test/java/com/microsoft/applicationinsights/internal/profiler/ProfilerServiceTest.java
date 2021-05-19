@@ -20,6 +20,21 @@
  */
 package com.microsoft.applicationinsights.internal.profiler;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.UnsupportedCharsetException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import com.microsoft.applicationinsights.TelemetryClient;
 import com.microsoft.applicationinsights.alerting.AlertingSubsystem;
 import com.microsoft.applicationinsights.alerting.alert.AlertBreach;
@@ -44,21 +59,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import reactor.core.publisher.Mono;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.UnsupportedCharsetException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import static com.microsoft.applicationinsights.internal.perfcounter.Constants.TOTAL_CPU_PC_METRIC_NAME;
 import static com.microsoft.applicationinsights.internal.perfcounter.jvm.JvmHeapMemoryUsedPerformanceCounter.HEAP_MEM_USED_PERCENTAGE;
@@ -148,9 +148,7 @@ public class ProfilerServiceTest {
                         2,
                         3,
                         "localhost",
-                        true,
-                        null,
-                        null
+                        true
                 ),
                 jfrProfiler,
                 ProfilerServiceInitializer.updateAlertingConfig(alertService),
@@ -208,9 +206,7 @@ public class ProfilerServiceTest {
                 2,
                 3,
                 "localhost",
-                false,
-                null,
-                null)) {
+                true)) {
             @Override
             protected void profileAndUpload(AlertBreach alertBreach, Duration duration) {
                 profileInvoked.set(true);

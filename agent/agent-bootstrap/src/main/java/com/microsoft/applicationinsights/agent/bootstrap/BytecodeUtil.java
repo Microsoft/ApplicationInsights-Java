@@ -29,7 +29,10 @@ import java.util.Map;
 import io.opentelemetry.instrumentation.api.aisdk.MicrometerUtil;
 import io.opentelemetry.instrumentation.api.aisdk.MicrometerUtil.MicrometerUtilDelegate;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.HOURS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 // supporting all properties of event, metric, remote dependency and page view telemetry
 public class BytecodeUtil {
@@ -141,28 +144,6 @@ public class BytecodeUtil {
                 }
             }
         }
-    }
-
-    // this exists only to support -Dapplicationinsights.debug.signedJarAccess=true
-    private static final ThreadLocal<Long> startNanosHolder = new ThreadLocal<>();
-
-    public static void onEnter() {
-        startNanosHolder.set(System.nanoTime());
-    }
-
-    public static void onExit() {
-        Long startNanos = startNanosHolder.get();
-        if (startNanos == null) {
-            System.out.println("Signed jar access (no timing available)");
-            Thread.dumpStack();
-        } else {
-            long durationNanos = System.nanoTime() - startNanos;
-            if (durationNanos > MILLISECONDS.toNanos(1)) {
-                System.out.println("Signed jar access (" + NANOSECONDS.toMillis(durationNanos) + " milliseconds)");
-                Thread.dumpStack();
-            }
-        }
-        startNanosHolder.remove();
     }
 
     public interface BytecodeUtilDelegate {

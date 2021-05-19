@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration>
+<configuration>
+    <appender name="CONSOLE" class="com.microsoft.applicationinsights.agent.shadow.ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSSX} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <include resource="logger-config/common.xml" />
+    <!-- override default value "off" set above in common.xml -->
+    <logger name="applicationinsights.extension.diagnostics" level="${applicationinsights.extension.diagnostics.level:-info}" />
+
+    <root>
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- user log -->
+    <include optional="true" resource="logger-config/file.appender.xml" />
+
+    <!-- internal troubleshooting/diagnostics log
+         enabled by setting APPLICATIONINSIGHTS_DIAGNOSTICS_OUTPUT_DIRECTORY -->
+    <include optional="true" resource="${ai.config.appender.diagnostics.location:-rp-logger-config/diagnostics.appender.xml}" />
+
+    <!-- etw appender (windows only) -->
+    <include optional="true" resource="${ai.config.appender.etw.location:-rp-logger-config/etw.appender.xml}" />
+
+    <!-- TODO what happens on app svc linux? -->
+
+</configuration>

@@ -90,9 +90,9 @@ public class StatusFileTests {
     }
 
     void assertMapHasExpectedInformation(Map<String, Object> inputMap, String key, String value) {
-        int size = 5;
+        int size = 6;
         if (key != null) {
-            size = 6;
+            size = 7;
             assertThat(inputMap, Matchers.<String, Object>hasEntry(key, value));
         }
         assertThat(inputMap.entrySet(), hasSize(size));
@@ -100,6 +100,7 @@ public class StatusFileTests {
         assertThat(inputMap, Matchers.<String, Object>hasEntry("Ikey", testIkey));
         assertThat(inputMap, hasKey("PID"));
         assertThat(inputMap, Matchers.<String, Object>hasEntry("AppType", "java"));
+        assertThat(inputMap, hasKey("SdkVersion"));
         assertThat(inputMap, Matchers.<String, Object>hasEntry("ExtensionVersion", fakeVersion));
     }
 

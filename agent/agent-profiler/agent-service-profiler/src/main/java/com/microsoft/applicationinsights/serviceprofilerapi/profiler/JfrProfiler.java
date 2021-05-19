@@ -20,6 +20,18 @@
  */
 package com.microsoft.applicationinsights.serviceprofilerapi.profiler;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanServerConnection;
+
 import com.microsoft.applicationinsights.alerting.alert.AlertBreach;
 import com.microsoft.applicationinsights.alerting.alert.AlertMetricType;
 import com.microsoft.applicationinsights.alerting.config.AlertingConfiguration.AlertConfiguration;
@@ -37,20 +49,6 @@ import com.microsoft.jfr.dcmd.FlightRecorderDiagnosticCommandConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanServerConnection;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
 /**
  * Manages connecting JFR interaction:
  * - Instantiates FlightRecorder subsystem
@@ -58,8 +56,6 @@ import java.util.function.Consumer;
  */
 public class JfrProfiler implements ProfilerConfigurationHandler, Profiler {
     private static final Logger LOGGER = LoggerFactory.getLogger(JfrProfiler.class);
-    public static final String REDUCED_MEMORY_PROFILE = "reduced-memory-profile.jfc";
-    public static final String REDUCED_CPU_PROFILE = "reduced-cpu-profile.jfc";
 
     // service execution context
     private ScheduledExecutorService scheduledExecutorService;
@@ -69,14 +65,12 @@ public class JfrProfiler implements ProfilerConfigurationHandler, Profiler {
 
     private FlightRecorderConnection flightRecorderConnection;
     private RecordingOptions recordingOptions;
+    private RecordingConfiguration recordingConfiguration;
 
     private AlertConfiguration periodicConfig;
 
     private final Object activeRecordingLock = new Object();
     private Recording activeRecording = null;
-
-    private final RecordingConfiguration memoryRecordingConfiguration;
-    private final RecordingConfiguration cpuRecordingConfiguration;
 
     public JfrProfiler(ServiceProfilerServiceConfig configuration) {
         periodicConfig = new AlertConfiguration(
@@ -86,42 +80,6 @@ public class JfrProfiler implements ProfilerConfigurationHandler, Profiler {
                 configuration.getPeriodicRecordingDuration(),
                 configuration.getPeriodicRecordingInterval()
         );
-
-        memoryRecordingConfiguration = getMemoryProfileConfig(configuration);
-        cpuRecordingConfiguration = getCpuProfileConfig(configuration);
-    }
-
-    private RecordingConfiguration getMemoryProfileConfig(ServiceProfilerServiceConfig configuration) {
-        return getRecordingConfiguration(configuration.memoryTriggeredSettings(), REDUCED_MEMORY_PROFILE);
-    }
-
-    private RecordingConfiguration getCpuProfileConfig(ServiceProfilerServiceConfig configuration) {
-        return getRecordingConfiguration(configuration.cpuTriggeredSettings(), REDUCED_CPU_PROFILE);
-    }
-
-    private RecordingConfiguration getRecordingConfiguration(String triggeredSettings, String reducedProfile) {
-        if (triggeredSettings != null) {
-            try {
-                ProfileTypes profile = ProfileTypes.valueOf(triggeredSettings);
-
-                if (profile == ProfileTypes.profile) {
-                    return RecordingConfiguration.PROFILE_CONFIGURATION;
-                } else if (profile == ProfileTypes.profile_without_env_data) {
-                    return new RecordingConfiguration.JfcFileConfiguration(JfrProfiler.class.getResourceAsStream(reducedProfile));
-                }
-            } catch (IllegalArgumentException e) {
-                //NOP, to be expected if a file is provided
-            }
-
-            try {
-                FileInputStream fis = new FileInputStream(triggeredSettings);
-                return new RecordingConfiguration.JfcFileConfiguration(fis);
-            } catch (FileNotFoundException e) {
-                LOGGER.error("Failed to find custom JFC file " + triggeredSettings + " using default profile");
-            }
-        }
-
-        return RecordingConfiguration.PROFILE_CONFIGURATION;
     }
 
     /**
@@ -136,6 +94,7 @@ public class JfrProfiler implements ProfilerConfigurationHandler, Profiler {
 
         // TODO -  allow user configuration of profile options
         recordingOptions = new RecordingOptions.Builder().build();
+        recordingConfiguration = RecordingConfiguration.PROFILE_CONFIGURATION;
 
         try {
             // connect to mbeans
@@ -166,23 +125,14 @@ public class JfrProfiler implements ProfilerConfigurationHandler, Profiler {
 
     protected void profileAndUpload(AlertBreach alertBreach, Duration duration) {
         Instant recordingStart = Instant.now();
-        executeProfile(alertBreach.getType(), duration, uploadNewRecording(alertBreach, recordingStart));
+        executeProfile(duration, uploadNewRecording(alertBreach, recordingStart));
     }
 
-    private Recording startRecording(AlertMetricType alertType) {
+    private Recording startRecording() {
         synchronized (activeRecordingLock) {
             if (activeRecording != null) {
                 LOGGER.warn("Alert received, however a profile is already in progress, ignoring request.");
                 return null;
-            }
-
-            RecordingConfiguration recordingConfiguration;
-            if (alertType == AlertMetricType.CPU) {
-                recordingConfiguration = cpuRecordingConfiguration;
-            } else if (alertType == AlertMetricType.MEMORY) {
-                recordingConfiguration = memoryRecordingConfiguration;
-            } else {
-                recordingConfiguration = RecordingConfiguration.PROFILE_CONFIGURATION;
             }
 
             activeRecording = flightRecorderConnection.newRecording(recordingOptions, recordingConfiguration);
@@ -193,7 +143,7 @@ public class JfrProfiler implements ProfilerConfigurationHandler, Profiler {
     /**
      * Perform a profile and notify the handler
      */
-    protected void executeProfile(AlertMetricType alertType, Duration duration, Consumer<Recording> handler) {
+    protected void executeProfile(Duration duration, Consumer<Recording> handler) {
 
         LOGGER.info("Starting profile");
 
@@ -202,7 +152,7 @@ public class JfrProfiler implements ProfilerConfigurationHandler, Profiler {
             return;
         }
 
-        Recording newRecording = startRecording(alertType);
+        Recording newRecording = startRecording();
 
         if (newRecording == null) {
             return;

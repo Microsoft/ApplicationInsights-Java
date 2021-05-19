@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <!-- internal troubleshooting/diagnostics logs -->
+    <appender name="ETW_PROVIDER" class="com.microsoft.applicationinsights.agent.bootstrap.diagnostics.etw.EtwAppender">
+        <!-- accepts logs only from applicationinsights.extension.diagnostics or errors -->
+        <filter class="com.microsoft.applicationinsights.agent.bootstrap.diagnostics.log.ApplicationInsightsDiagnosticsLogFilter"/>
+    </appender>
+
+    <root>
+        <appender-ref ref="ETW_PROVIDER" /><!-- optional; windows only, platform dependent -->
+    </root>
+</included>

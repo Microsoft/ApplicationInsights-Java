@@ -21,15 +21,10 @@
 package com.microsoft.applicationinsights.profiler.config;
 
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Configuration of the service profiler subsystem
  */
 public class ServiceProfilerServiceConfig {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ServiceProfilerServiceConfig.class);
-
     public static final int DEFAULT_CONFIG_POLL_PERIOD_IN_MS = 60000;
     public static final int DEFAULT_PERIODIC_RECORDING_DURATION_IN_S = 120;
     public static final int DEFAULT_PERIODIC_RECORDING_INTERVAL_IN_S = 60 * 60;
@@ -48,28 +43,12 @@ public class ServiceProfilerServiceConfig {
     // Enable entire service profiler subsystem
     private final boolean enabled;
 
-    // Either an inbuilt profile as defined in ProfileTypes, or a path to a custom JFC file to use for memory profiling
-    private String memoryTriggeredSettings;
-
-    // Either an inbuilt profile as defined in ProfileTypes, or a path to a custom JFC file to use for cpu profiling
-    private String cpuTriggeredSettings;
-
-    public ServiceProfilerServiceConfig(
-            int configPollPeriod,
-            int periodicRecordingDuration,
-            int periodicRecordingInterval,
-            String serviceProfilerFrontEndPoint,
-            boolean enabled,
-            String memoryTriggeredSettings,
-            String cpuTriggeredSettings
-    ) {
+    public ServiceProfilerServiceConfig(int configPollPeriod, int periodicRecordingDuration, int periodicRecordingInterval, String serviceProfilerFrontEndPoint, boolean enabled) {
         this.configPollPeriod = configPollPeriod;
         this.periodicRecordingDuration = periodicRecordingDuration;
         this.periodicRecordingInterval = periodicRecordingInterval;
         this.serviceProfilerFrontEndPoint = serviceProfilerFrontEndPoint;
         this.enabled = enabled;
-        this.memoryTriggeredSettings = memoryTriggeredSettings;
-        this.cpuTriggeredSettings = cpuTriggeredSettings;
     }
 
     public int getConfigPollPeriod() {
@@ -90,13 +69,5 @@ public class ServiceProfilerServiceConfig {
 
     public boolean enabled() {
         return enabled;
-    }
-
-    public String memoryTriggeredSettings() {
-        return memoryTriggeredSettings;
-    }
-
-    public String cpuTriggeredSettings() {
-        return cpuTriggeredSettings;
     }
 }

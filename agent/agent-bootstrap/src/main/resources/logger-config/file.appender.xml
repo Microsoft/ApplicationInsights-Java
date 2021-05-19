@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+  <appender name="FILE" class="com.microsoft.applicationinsights.agent.shadow.ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${applicationinsights.logback.file.path}</file>
+    <rollingPolicy class="com.microsoft.applicationinsights.agent.shadow.ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+      <fileNamePattern>${applicationinsights.logback.file.rollingPath}</fileNamePattern>
+      <minIndex>1</minIndex>
+      <maxIndex>${applicationinsights.logback.file.maxIndex}</maxIndex>
+    </rollingPolicy>
+    <triggeringPolicy class="com.microsoft.applicationinsights.agent.shadow.ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+      <maxFileSize>${applicationinsights.logback.file.maxSize}</maxFileSize>
+    </triggeringPolicy>
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSSX} %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  <root>
+    <appender-ref ref="FILE" />
+  </root>
+</included>

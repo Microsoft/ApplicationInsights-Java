@@ -13,15 +13,6 @@
         </Or>
     </Match>
     <Match>
-        <Bug pattern="PATH_TRAVERSAL_IN" />
-        <Or>
-            <And>
-                <Class name="com.microsoft.applicationinsights.serviceprofilerapi.profiler.JfrProfiler" />
-                <Method name="getRecordingConfiguration" />
-            </And>
-        </Or>
-    </Match>
-    <Match>
         <Bug pattern="RV_RETURN_VALUE_IGNORED" />
         <Or>
             <And>

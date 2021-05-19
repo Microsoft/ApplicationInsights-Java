@@ -68,7 +68,6 @@ dependencies {
     }
     implementation group: 'org.slf4j', name: 'jcl-over-slf4j', version: versions.slf4j
     implementation group: 'ch.qos.logback', name: 'logback-classic', version: versions.logback
-    implementation group: 'ch.qos.logback.contrib', name: 'logback-json-classic', version: versions.logbackJson
 
     implementation project(":agent:agent-profiler:agent-profiler-api")
 

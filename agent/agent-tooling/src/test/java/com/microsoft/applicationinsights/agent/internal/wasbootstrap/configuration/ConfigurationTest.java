@@ -53,7 +53,7 @@ public class ConfigurationTest {
         assertEquals("abc", configuration.customDimensions.get("some key"));
         assertEquals("def", configuration.customDimensions.get("another key"));
         assertEquals(10.0, configuration.sampling.percentage, 0);
-        assertEquals(3, configuration.jmxMetrics.size());
+        assertEquals(4, configuration.jmxMetrics.size());
         assertEquals("Thread Count", configuration.jmxMetrics.get(0).name);
         assertEquals("java.lang:type=Threading", configuration.jmxMetrics.get(0).objectName);
         assertEquals("ThreadCount", configuration.jmxMetrics.get(0).attribute);
@@ -201,7 +201,7 @@ public class ConfigurationTest {
         assertEquals("InstrumentationKey=00000000-0000-0000-0000-000000000000", configuration.connectionString);
         assertEquals("Something Good", configuration.role.name);
         assertEquals("xyz123", configuration.role.instance);
-        assertEquals(3, configuration.jmxMetrics.size());
+        assertEquals(4, configuration.jmxMetrics.size());
         assertEquals("error", configuration.instrumentation.logging.level);
         assertTrue(configuration.instrumentation.micrometer.enabled);
         assertEquals(60, configuration.heartbeat.intervalSeconds);

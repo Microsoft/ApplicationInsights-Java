@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration>
+<configuration>
+  <include resource="logger-config/console.appender.xml" />
+  <include resource="logger-config/common.xml" />
+</configuration>

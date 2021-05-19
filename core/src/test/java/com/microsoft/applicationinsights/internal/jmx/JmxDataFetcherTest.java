@@ -47,7 +47,7 @@ public class JmxDataFetcherTest {
         }
     }
 
-    @Test(expected = Exception.class)
+    @Test
     public void testBadAttributeName() throws Exception {
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
         ObjectName mxbeanName = new ObjectName("JSDKTests:type=TestStub3");

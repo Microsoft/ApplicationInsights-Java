@@ -6,5 +6,4 @@ dependencies {
     implementation project(":agent:agent-profiler:agent-alerting-api")
     implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: versions.apacheHttpClient
     implementation group: 'com.squareup.moshi', name: 'moshi', version: versions.moshi
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: versions.slf4j
 }

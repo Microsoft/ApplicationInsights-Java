@@ -1,4 +1,0 @@
-[submodule "otel"]
-	path = otel
-	url = https://github.com/microsoft/ApplicationInsights-Java.git
-	branch = otel-fork

@@ -62,7 +62,6 @@ include ':agent:agent-profiler:agent-profiler-api'
 include ':agent:agent-profiler:agent-alerting-api'
 include ':agent:agent-profiler:agent-alerting'
 include ':agent:agent-profiler:agent-service-profiler'
-
 include ':agent:agent-bootstrap'
 include ':agent:exporter'
 include ':agent:agent-tooling'

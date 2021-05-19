@@ -28,6 +28,7 @@ import java.lang.instrument.Instrumentation;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Locale;
 
 import com.microsoft.applicationinsights.agent.bootstrap.diagnostics.DiagnosticsHelper;
 import com.microsoft.applicationinsights.agent.bootstrap.diagnostics.SdkVersionFinder;
@@ -43,11 +44,10 @@ import io.opentelemetry.javaagent.tooling.AgentInstaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.slf4j.event.Level;
 
 // this class initializes configuration and logging before passing control to opentelemetry-java-instrumentation
 public class MainEntryPoint {
-
-    private static final boolean DEBUG_SIGNED_JAR_ACCESS = Boolean.getBoolean("applicationinsights.debug.signedJarAccess");
 
     private static RpConfiguration rpConfiguration;
     private static Configuration configuration;
@@ -67,16 +67,9 @@ public class MainEntryPoint {
     public static void start(Instrumentation instrumentation, URL bootstrapURL) {
         boolean success = false;
         Logger startupLogger = null;
-        String version = "(unknown)";
+        String version = SdkVersionFinder.readVersion();
         try {
-            if (DEBUG_SIGNED_JAR_ACCESS) {
-                JarVerifierClassFileTransformer transformer = new JarVerifierClassFileTransformer();
-                instrumentation.addTransformer(transformer, true);
-                instrumentation.retransformClasses(Class.forName("java.util.jar.JarVerifier"));
-                instrumentation.removeTransformer(transformer);
-            }
             Path agentPath = new File(bootstrapURL.toURI()).toPath();
-            version = SdkVersionFinder.initVersion(agentPath);
             DiagnosticsHelper.setAgentJarFile(agentPath);
             // configuration is only read this early in order to extract logging configuration
             rpConfiguration = RpConfigurationBuilder.create(agentPath);
@@ -174,7 +167,97 @@ public class MainEntryPoint {
     }
 
     private static Logger configureLogging(SelfDiagnostics selfDiagnostics, Path agentPath) {
-        new LoggingConfigurator(selfDiagnostics, agentPath).configure();
-        return LoggerFactory.getLogger("com.microsoft.applicationinsights.agent");
+        String logbackXml;
+        String destination = selfDiagnostics.destination;
+        if (DiagnosticsHelper.useAppSvcRpIntegrationLogging()) {
+            // Diagnostics IPA log file location. Disabled by default.
+            final String internalLogOutputLocation = System.getenv(DiagnosticsHelper.APPLICATIONINSIGHTS_DIAGNOSTICS_OUTPUT_DIRECTORY);
+            if (internalLogOutputLocation == null || internalLogOutputLocation.isEmpty()) {
+                System.setProperty("ai.config.appender.diagnostics.location", "");
+            }
+
+            // Diagnostics IPA ETW provider. Windows-only.
+            if (!DiagnosticsHelper.isOsWindows()) {
+                System.setProperty("ai.config.appender.etw.location", "");
+            }
+            logbackXml = "applicationinsights.appsvc.logback.xml";
+        } else if (destination == null || destination.equalsIgnoreCase("file+console")) {
+            logbackXml = "applicationinsights.file-and-console.logback.xml";
+        } else if (destination.equalsIgnoreCase("file")) {
+            logbackXml = "applicationinsights.file.logback.xml";
+        } else if (destination.equalsIgnoreCase("console")) {
+            logbackXml = "applicationinsights.console.logback.xml";
+        } else {
+            throw new IllegalStateException("Unknown self-diagnostics destination: " + destination);
+        }
+        ClassLoader cl = MainEntryPoint.class.getClassLoader();
+        if (cl == null) {
+            cl = ClassLoader.getSystemClassLoader();
+        }
+        final URL configurationFile = cl.getResource(logbackXml);
+
+        Level level = getLevel(selfDiagnostics.level);
+
+        Path logFilePath = agentPath.resolveSibling(selfDiagnostics.file.path);
+        Path logFileNamePath = logFilePath.getFileName();
+        if (logFileNamePath == null) {
+            throw new IllegalStateException("Unexpected empty self-diagnostics file path");
+        }
+        String logFileName = logFileNamePath.toString();
+        String rollingFileName;
+        int index = logFileName.lastIndexOf('.');
+        if (index != -1) {
+            rollingFileName = logFileName.substring(0, index) + ".%i" + logFileName.substring(index);
+        } else {
+            rollingFileName = logFileName + ".%i";
+        }
+        Path rollingFilePath = logFilePath.resolveSibling(rollingFileName);
+
+        // never want to log apache http at trace or debug, it's just way to verbose
+        Level atLeastInfoLevel = getMaxLevel(level, Level.INFO);
+
+        Level otherLibsLevel = level == Level.INFO ? Level.WARN : level;
+
+        // TODO need something more reliable, currently will log too much WARN if "muzzleMatcher" logger name changes
+        // muzzleMatcher logs at WARN level in order to make them visible, but really should only be enabled when debugging
+        Level muzzleMatcherLevel = level.toInt() <= Level.DEBUG.toInt() ? level : getMaxLevel(level, Level.ERROR);
+
+        try {
+            System.setProperty("applicationinsights.logback.configurationFile", configurationFile.toString());
+
+            System.setProperty("applicationinsights.logback.file.path", logFilePath.toString());
+            System.setProperty("applicationinsights.logback.file.rollingPath", rollingFilePath.toString());
+            System.setProperty("applicationinsights.logback.file.maxSize", selfDiagnostics.file.maxSizeMb + "MB");
+            System.setProperty("applicationinsights.logback.file.maxIndex", Integer.toString(selfDiagnostics.file.maxHistory));
+
+            System.setProperty("applicationinsights.logback.level", level.toString());
+            System.setProperty("applicationinsights.logback.level.other", otherLibsLevel.toString());
+            System.setProperty("applicationinsights.logback.level.atLeastInfo", atLeastInfoLevel.toString());
+            System.setProperty("applicationinsights.logback.level.muzzleMatcher", muzzleMatcherLevel.toString());
+
+            return LoggerFactory.getLogger("com.microsoft.applicationinsights.agent");
+        } finally {
+            System.clearProperty("applicationinsights.logback.configurationFile");
+            System.clearProperty("applicationinsights.logback.file.path");
+            System.clearProperty("applicationinsights.logback.file.rollingPath");
+            System.clearProperty("applicationinsights.logback.file.maxSize");
+            System.clearProperty("applicationinsights.logback.file.maxIndex");
+            System.clearProperty("applicationinsights.logback.level");
+            System.clearProperty("applicationinsights.logback.level.other");
+            System.clearProperty("applicationinsights.logback.level.atLeastInfo");
+            System.clearProperty("applicationinsights.logback.level.muzzleMatcher");
+        }
+    }
+
+    private static Level getMaxLevel(Level level1, Level level2) {
+        return level1.toInt() >= level2.toInt() ? level1 : level2;
+    }
+
+    private static Level getLevel(String levelStr) {
+        try {
+            return Level.valueOf(levelStr.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Unexpected self-diagnostic level: " + levelStr);
+        }
     }
 }

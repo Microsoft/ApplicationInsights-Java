@@ -20,6 +20,14 @@
  */
 package com.microsoft.applicationinsights.internal.profiler;
 
+import java.util.Iterator;
+import java.util.ServiceLoader;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 import com.microsoft.applicationinsights.TelemetryClient;
 import com.microsoft.applicationinsights.alerting.AlertingSubsystem;
 import com.microsoft.applicationinsights.alerting.alert.AlertBreach;
@@ -36,14 +44,6 @@ import com.microsoft.applicationinsights.telemetry.EventTelemetry;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Iterator;
-import java.util.ServiceLoader;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /**
  * Service profiler main entry point, wires up:

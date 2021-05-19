@@ -37,6 +37,14 @@
       "name": "Current Class Loaded Count",
       "objectName": "java.lang:type=ClassLoading",
       "attribute": "LoadedClassCount"
+    },
+    {
+      "objectName": "java.lang:type=Threading",
+      "attributes": [
+        "PeakThreadCount",
+        "ThreadCount",
+        "DaemonThreadCount"
+      ]
     }
   ],
   "heartbeat": {

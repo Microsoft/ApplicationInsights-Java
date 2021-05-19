@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <!-- internal troubleshooting/diagnostics logs -->
+    <appender name="DIAGNOSTICS_FILE" class="com.microsoft.applicationinsights.agent.shadow.ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${APPLICATIONINSIGHTS_DIAGNOSTICS_OUTPUT_DIRECTORY}/applicationinsights-extension.log</file>
+        <rollingPolicy class="com.microsoft.applicationinsights.agent.shadow.ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${APPLICATIONINSIGHTS_DIAGNOSTICS_OUTPUT_DIRECTORY}/applicationinsights-extension-%d{yyyy-MM-dd}.%i.log.old</fileNamePattern>
+            <maxHistory>1</maxHistory>
+            <totalSizeCap>10MB</totalSizeCap>
+            <maxFileSize>5MB</maxFileSize>
+        </rollingPolicy>
+        <encoder class="com.microsoft.applicationinsights.agent.shadow.ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="com.microsoft.applicationinsights.agent.bootstrap.diagnostics.log.ApplicationInsightsJsonLayout">
+                <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSX</timestampFormat>
+                <timestampFormatTimezoneId>Etc/UTC</timestampFormatTimezoneId>
+                <appendLineSeparator>true</appendLineSeparator>
+                <jsonFormatter class="com.microsoft.applicationinsights.agent.bootstrap.diagnostics.log.MoshiJsonFormatter">
+                    <prettyPrint>false</prettyPrint>
+                </jsonFormatter>
+            </layout>
+        </encoder>
+        <!-- accepts logs only from applicationinsights.extension.diagnostics or errors -->
+        <filter class="com.microsoft.applicationinsights.agent.bootstrap.diagnostics.log.ApplicationInsightsDiagnosticsLogFilter"/>
+    </appender>
+
+    <root>
+        <appender-ref ref="DIAGNOSTICS_FILE" /><!-- optional; platform dependent -->
+    </root>
+</included>

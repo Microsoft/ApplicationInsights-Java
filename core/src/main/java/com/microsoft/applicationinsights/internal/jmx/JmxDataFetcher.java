@@ -22,11 +22,8 @@
 package com.microsoft.applicationinsights.internal.jmx;
 
 import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanException;
@@ -46,6 +43,7 @@ import org.slf4j.LoggerFactory;
 public class JmxDataFetcher {
 
     private static final Logger logger = LoggerFactory.getLogger(JmxDataFetcher.class);
+    private static Set<JmxAttributeData> warningShown= Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * Gets an object name and its attributes to fetch and will return the data.
@@ -62,6 +60,7 @@ public class JmxDataFetcher {
 
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
         Set<ObjectName> objects = server.queryNames(new ObjectName(objectName), null);
+
         if (objects.isEmpty()) {
             String errorMsg = String.format("Cannot find object name '%s'", objectName);
             throw new IllegalArgumentException(errorMsg);
@@ -72,8 +71,9 @@ public class JmxDataFetcher {
                 Collection<Object> resultForAttribute = fetch(server, objects, attribute.attribute);
                 result.put(attribute.metricName, resultForAttribute);
             } catch (Exception e) {
-                logger.warn("Failed to fetch JMX object '{}' with attribute '{}': ", objectName, attribute.attribute);
-                throw e;
+                if(warningShown.add(attribute)) {
+                    logger.warn("Failed to fetch JMX object '{}' with attribute '{}': {}", objectName, attribute.attribute, e.toString());
+                }
             }
         }
 

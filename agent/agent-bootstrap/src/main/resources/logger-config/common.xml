@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+  <!-- these messages are specifically designed for attach -->
+  <logger name="applicationinsights.extension.diagnostics" level="off" />
+  <!-- never want to log apache http at trace or debug, it's just way to verbose -->
+  <logger name="org.apache.http" level="${applicationinsights.logback.level.atLeastInfo}" />
+  <!-- never want to log io.grpc.Context at trace or debug, as it logs confusing stack trace that looks like error but isn't -->
+  <logger name="io.opentelemetry.javaagent.shaded.io.grpc.Context" level="${applicationinsights.logback.level.atLeastInfo}" />
+  <!-- muzzleMatcher logs at WARN level, so by default this is OFF, but enabled when DEBUG logging is enabled -->
+  <logger name="muzzleMatcher" level="${applicationinsights.logback.level.muzzleMatcher}" />
+  <logger name="com.microsoft.applicationinsights" level="${applicationinsights.logback.level}" />
+  <root level="${applicationinsights.logback.level.other}" />
+</included>
