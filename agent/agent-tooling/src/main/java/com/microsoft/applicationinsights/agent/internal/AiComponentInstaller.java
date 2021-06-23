@@ -60,6 +60,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
 import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
@@ -296,11 +297,23 @@ public class AiComponentInstaller implements AgentListener {
         // configure custom jmx metrics
         ArrayList<JmxXmlElement> jmxXmls = new ArrayList<>();
         for (JmxMetric jmxMetric : config.jmxMetrics) {
-            JmxXmlElement jmxXml = new JmxXmlElement();
-            jmxXml.setName(jmxMetric.name);
-            jmxXml.setObjectName(jmxMetric.objectName);
-            jmxXml.setAttribute(jmxMetric.attribute);
-            jmxXmls.add(jmxXml);
+            if (!jmxMetric.attribute.isEmpty()) {
+                JmxXmlElement jmxXml = new JmxXmlElement();
+                jmxXml.setName(jmxMetric.name);
+                jmxXml.setObjectName(jmxMetric.objectName);
+                jmxXml.setAttribute(jmxMetric.attribute);
+                jmxXmls.add(jmxXml);
+            }
+            else if (!jmxMetric.attributes.isEmpty()) {
+                String displayName = getJmxDisplayName(jmxMetric.objectName);
+                for (String attribute : jmxMetric.attributes) {
+                    JmxXmlElement jmxXml = new JmxXmlElement();
+                    jmxXml.setName(displayName + attribute);
+                    jmxXml.setObjectName(jmxMetric.objectName);
+                    jmxXml.setAttribute(attribute);
+                    jmxXmls.add(jmxXml);
+                }
+            }
         }
         xmlConfiguration.getPerformance().setJmxXmlElements(jmxXmls);
 
@@ -310,6 +323,34 @@ public class AiComponentInstaller implements AgentListener {
 
         return xmlConfiguration;
     }
+
+    static String getJmxDisplayName(String attribute) {
+        StringBuilder name = new StringBuilder("");
+        try
+        {
+            ObjectName nameObject = new ObjectName(attribute);
+            name.append(nameObject.getDomain()).append(" /");
+            Hashtable properties = nameObject.getKeyPropertyList();
+
+            Set types = properties.entrySet();
+            SortedMap<Integer, String> orderedTypes = new TreeMap<>();
+
+
+            for(Object typeEntry : types) {
+                String type = ((Map.Entry<String, String>)typeEntry).getKey();
+                int typeIndex = attribute.indexOf(type);
+                orderedTypes.put(typeIndex, (String)properties.get(type));
+            }
+            StringBuilder valuesString = new StringBuilder(orderedTypes.values().toString().replaceAll(", ", " /"));
+            valuesString.deleteCharAt(0);
+            valuesString.deleteCharAt(valuesString.length()-1);
+            name.append(valuesString).append(" /");
+        }
+        catch(Exception e) {
+            startupLogger.debug("Could not generate default metric name for attribute " + attribute);
+        }
+            return name.toString();
+        }
 
     private static ParamXmlElement newParamXml(String name, String value) {
         ParamXmlElement paramXml = new ParamXmlElement();
