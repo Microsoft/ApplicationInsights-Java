@@ -108,6 +108,9 @@ public class Exporter implements SpanExporter {
     STANDARD_ATTRIBUTE_PREFIXES = Collections.unmodifiableSet(standardAttributesPrefix);
   }
 
+  public static final AttributeKey<String> AI_OPERATION_NAME_KEY =
+      AttributeKey.stringKey("applicationinsights.internal.operation_name");
+
   private static final AttributeKey<Boolean> AI_LOG_KEY =
       AttributeKey.booleanKey("applicationinsights.internal.log");
 
@@ -397,6 +400,10 @@ public class Exporter implements SpanExporter {
     telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), traceId);
     if (SpanId.isValid(parentSpanId)) {
       telemetry.getTags().put(ContextTagKeys.AI_OPERATION_PARENT_ID.toString(), parentSpanId);
+    }
+    String operationName = attributes.get(AI_OPERATION_NAME_KEY);
+    if (operationName != null) {
+      telemetry.getTags().put(ContextTagKeys.AI_OPERATION_NAME.toString(), operationName);
     }
   }
 

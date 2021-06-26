@@ -112,9 +112,14 @@ public class OpenTelemetryConfigurer implements SdkTracerProviderConfigurer {
     // real batching is done at a lower level
     batchSpanProcessor = BatchSpanProcessor.builder(currExporter).setMaxExportBatchSize(1).build();
     tracerProvider.addSpanProcessor(batchSpanProcessor);
-    // legacy span processor is only applied on span start, to pass legacy attributes from the
-    // context (extracted by the AiLegacyPropagator) to the span attributes
-    // (since there is no way to update attributes on span directly from propagator)
+    // operation name span processor is only applied on span start, so doesn't need to be chained
+    // with above span processors
+    tracerProvider.addSpanProcessor(new AiOperationNameSpanProcessor());
+    // legacy span processor is only applied on span start, so doesn't need to be chained with above
+    // span processors
+    // it is used to pass legacy attributes from the context (extracted by the AiLegacyPropagator)
+    // to the span attributes (since there is no way to update attributes on span directly from
+    // propagator)
     tracerProvider.addSpanProcessor(new AiLegacyHeaderSpanProcessor());
   }
 }
