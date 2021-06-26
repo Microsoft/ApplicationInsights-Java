@@ -39,6 +39,7 @@ import com.microsoft.applicationinsights.agent.internal.wascore.common.Strings;
 import com.microsoft.applicationinsights.agent.internal.wascore.statsbeat.StatsbeatModule;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.SpanId;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.TraceState;
@@ -116,9 +117,9 @@ public class Exporter implements SpanExporter {
       AttributeKey.stringKey(AiAppId.SPAN_TARGET_APP_ID_ATTRIBUTE_NAME);
 
   public static final AttributeKey<String> AI_LEGACY_PARENT_ID_KEY =
-      AttributeKey.stringKey("ai-internal-legacy-parent-id");
+      AttributeKey.stringKey("applicationinsights.internal.legacy_parent_id");
   public static final AttributeKey<String> AI_LEGACY_ROOT_ID_KEY =
-      AttributeKey.stringKey("ai-internal-legacy-root-id");
+      AttributeKey.stringKey("applicationinsights.internal.legacy_root_id");
 
   // this is only used by the 2.x web interop bridge
   // for ThreadContext.getRequestTelemetryContext().getRequestTelemetry().setSource()
@@ -237,9 +238,21 @@ public class Exporter implements SpanExporter {
     TelemetryItem telemetry = new TelemetryItem();
     RemoteDependencyData data = new RemoteDependencyData();
     telemetryClient.initRemoteDependencyTelemetry(telemetry, data);
+    float samplingPercentage = getSamplingPercentage(span.getSpanContext().getTraceState());
 
+    // set standard properties
+    setOperationTags(telemetry, span);
+    setTime(telemetry, span.getStartEpochNanos());
+    setSampleRate(telemetry, samplingPercentage);
+    setExtraAttributes(telemetry, data, span.getAttributes());
     addLinks(data, span.getLinks());
+
+    // set dependency-specific properties
+    data.setId(span.getSpanId());
     data.setName(getTelemetryName(span));
+    data.setDuration(
+        FormattedDuration.fromNanos(span.getEndEpochNanos() - span.getStartEpochNanos()));
+    data.setSuccess(span.getStatus().getStatusCode() != StatusCode.ERROR);
 
     if (inProc) {
       data.setType("InProc");
@@ -247,32 +260,9 @@ public class Exporter implements SpanExporter {
       applySemanticConventions(span, data);
     }
 
-    data.setId(span.getSpanId());
-    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), span.getTraceId());
-    if (span.getParentSpanContext().isValid()) {
-      telemetry
-          .getTags()
-          .put(
-              ContextTagKeys.AI_OPERATION_PARENT_ID.toString(),
-              span.getParentSpanContext().getSpanId());
-    }
-
-    telemetry.setTime(FormattedTime.fromEpochNanos(span.getStartEpochNanos()));
-    data.setDuration(
-        FormattedDuration.fromNanos(span.getEndEpochNanos() - span.getStartEpochNanos()));
-
-    data.setSuccess(span.getStatus().getStatusCode() != StatusCode.ERROR);
-
-    setExtraAttributes(telemetry, data, span.getAttributes());
-
-    float samplingPercentage = getSamplingPercentage(span.getSpanContext().getTraceState());
-    telemetry.setSampleRate(samplingPercentage);
+    // export
     telemetryClient.trackAsync(telemetry);
     exportEvents(span, samplingPercentage);
-  }
-
-  private static float getSamplingPercentage(TraceState traceState) {
-    return TelemetryUtil.getSamplingPercentage(traceState, 100, true);
   }
 
   private static void applySemanticConventions(
@@ -337,71 +327,77 @@ public class Exporter implements SpanExporter {
   private void exportLogSpan(SpanData span) {
     String errorStack = span.getAttributes().get(AI_LOG_ERROR_STACK_KEY);
     if (errorStack == null) {
-      trackTrace(span);
+      trackMessage(span);
     } else {
       trackTraceAsException(span, errorStack);
     }
   }
 
-  private void trackTrace(SpanData span) {
-    Attributes attributes = span.getAttributes();
-    String level = attributes.get(AI_LOG_LEVEL_KEY);
-    String loggerName = attributes.get(AI_LOGGER_NAME_KEY);
-
+  private void trackMessage(SpanData span) {
     TelemetryItem telemetry = new TelemetryItem();
     MessageData data = new MessageData();
     telemetryClient.initMessageTelemetry(telemetry, data);
+    Attributes attributes = span.getAttributes();
+
+    // set standard properties
+    setTime(telemetry, span.getStartEpochNanos());
+    setOperationTags(telemetry, span);
+    setSampleRate(telemetry, span);
+    setExtraAttributes(telemetry, data, attributes);
+
+    // set message-specific properties
+    String level = attributes.get(AI_LOG_LEVEL_KEY);
+    String loggerName = attributes.get(AI_LOGGER_NAME_KEY);
 
     data.setVersion(2);
     data.setSeverityLevel(toSeverityLevel(level));
     data.setMessage(span.getName());
 
-    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), span.getTraceId());
-    if (span.getParentSpanContext().isValid()) {
-      telemetry
-          .getTags()
-          .put(
-              ContextTagKeys.AI_OPERATION_PARENT_ID.toString(),
-              span.getParentSpanContext().getSpanId());
-    }
-
     setLoggerProperties(data, level, loggerName);
-    setExtraAttributes(telemetry, data, attributes);
-    telemetry.setTime(FormattedTime.fromEpochNanos(span.getStartEpochNanos()));
 
-    float samplingPercentage = getSamplingPercentage(span.getSpanContext().getTraceState());
-    telemetry.setSampleRate(samplingPercentage);
+    // export
     telemetryClient.trackAsync(telemetry);
   }
 
   private void trackTraceAsException(SpanData span, String errorStack) {
-    Attributes attributes = span.getAttributes();
-    String level = attributes.get(AI_LOG_LEVEL_KEY);
-    String loggerName = attributes.get(AI_LOGGER_NAME_KEY);
-
     TelemetryItem telemetry = new TelemetryItem();
     TelemetryExceptionData data = new TelemetryExceptionData();
     telemetryClient.initExceptionTelemetry(telemetry, data);
+    Attributes attributes = span.getAttributes();
 
-    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), span.getTraceId());
-    if (span.getParentSpanContext().isValid()) {
-      telemetry
-          .getTags()
-          .put(
-              ContextTagKeys.AI_OPERATION_PARENT_ID.toString(),
-              span.getParentSpanContext().getSpanId());
-    }
+    // set standard properties
+    setOperationTags(telemetry, span);
+    setTime(telemetry, span.getStartEpochNanos());
+    setSampleRate(telemetry, span);
+    setExtraAttributes(telemetry, data, attributes);
+
+    // set exception-specific properties
+    String level = attributes.get(AI_LOG_LEVEL_KEY);
+    String loggerName = attributes.get(AI_LOGGER_NAME_KEY);
 
     data.setExceptions(Exceptions.minimalParse(errorStack));
     data.setSeverityLevel(toSeverityLevel(level));
     TelemetryUtil.getProperties(data).put("Logger Message", span.getName());
     setLoggerProperties(data, level, loggerName);
-    setExtraAttributes(telemetry, data, attributes);
-    telemetry.setTime(FormattedTime.fromEpochNanos(span.getStartEpochNanos()));
 
-    float samplingPercentage = getSamplingPercentage(span.getSpanContext().getTraceState());
-    telemetry.setSampleRate(samplingPercentage);
+    // export
     telemetryClient.trackAsync(telemetry);
+  }
+
+  private static void setOperationTags(TelemetryItem telemetry, SpanData span) {
+    setOperationTags(
+        telemetry,
+        span.getTraceId(),
+        span.getParentSpanContext().getSpanId(),
+        span.getAttributes());
+  }
+
+  private static void setOperationTags(
+      TelemetryItem telemetry, String traceId, String parentSpanId, Attributes attributes) {
+    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), traceId);
+    if (SpanId.isValid(parentSpanId)) {
+      telemetry.getTags().put(ContextTagKeys.AI_OPERATION_PARENT_ID.toString(), parentSpanId);
+    }
   }
 
   private static void setLoggerProperties(MonitorDomain data, String level, String loggerName) {
@@ -623,12 +619,67 @@ public class Exporter implements SpanExporter {
     TelemetryItem telemetry = new TelemetryItem();
     RequestData data = new RequestData();
     telemetryClient.initRequestTelemetry(telemetry, data);
+    Attributes attributes = span.getAttributes();
+    long startEpochNanos = span.getStartEpochNanos();
+    String name = getTelemetryName(span);
+    float samplingPercentage = getSamplingPercentage(span.getSpanContext().getTraceState());
+
+    // set standard properties
+    data.setId(span.getSpanId());
+    setTime(telemetry, startEpochNanos);
+    setSampleRate(telemetry, samplingPercentage);
+    setExtraAttributes(telemetry, data, attributes);
+    addLinks(data, span.getLinks());
+
+    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_NAME.toString(), name);
+    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), span.getTraceId());
+
+    // see behavior specified at https://github.com/microsoft/ApplicationInsights-Java/issues/1174
+    String aiLegacyParentId = span.getAttributes().get(AI_LEGACY_PARENT_ID_KEY);
+    if (aiLegacyParentId != null) {
+      // this was the real (legacy) parent id, but it didn't fit span id format
+      telemetry.getTags().put(ContextTagKeys.AI_OPERATION_PARENT_ID.toString(), aiLegacyParentId);
+    } else if (span.getParentSpanContext().isValid()) {
+      telemetry
+          .getTags()
+          .put(
+              ContextTagKeys.AI_OPERATION_PARENT_ID.toString(),
+              span.getParentSpanContext().getSpanId());
+    }
+    String aiLegacyRootId = span.getAttributes().get(AI_LEGACY_ROOT_ID_KEY);
+    if (aiLegacyRootId != null) {
+      telemetry.getTags().put("ai_legacyRootID", aiLegacyRootId);
+    }
+
+    // set request-specific properties
+    data.setName(name);
+    data.setDuration(FormattedDuration.fromNanos(span.getEndEpochNanos() - startEpochNanos));
+    data.setSuccess(span.getStatus().getStatusCode() != StatusCode.ERROR);
+
+    String httpUrl = attributes.get(SemanticAttributes.HTTP_URL);
+    if (httpUrl != null) {
+      data.setUrl(httpUrl);
+    }
+
+    Long httpStatusCode = attributes.get(SemanticAttributes.HTTP_STATUS_CODE);
+    if (httpStatusCode != null) {
+      data.setResponseCode(Long.toString(httpStatusCode));
+    } else {
+      // TODO (trask) AI mapping: what should the default value be?
+      data.setResponseCode("200");
+    }
+
+    String locationIp = attributes.get(SemanticAttributes.HTTP_CLIENT_IP);
+    if (locationIp == null) {
+      // only use net.peer.ip if http.client_ip is not available
+      locationIp = attributes.get(SemanticAttributes.NET_PEER_IP);
+    }
+    if (locationIp != null) {
+      telemetry.getTags().put(ContextTagKeys.AI_LOCATION_IP.toString(), locationIp);
+    }
 
     String source = null;
-    Attributes attributes = span.getAttributes();
-
     String sourceAppId = attributes.get(AI_SPAN_SOURCE_APP_ID_KEY);
-
     if (sourceAppId != null && !AiAppId.getAppId().equals(sourceAppId)) {
       source = sourceAppId;
     }
@@ -654,64 +705,7 @@ public class Exporter implements SpanExporter {
     }
     data.setSource(source);
 
-    addLinks(data, span.getLinks());
-    Long httpStatusCode = attributes.get(SemanticAttributes.HTTP_STATUS_CODE);
-    if (httpStatusCode != null) {
-      data.setResponseCode(Long.toString(httpStatusCode));
-    } else {
-      // TODO (trask) AI mapping: what should the default value be?
-      data.setResponseCode("200");
-    }
-
-    String httpUrl = attributes.get(SemanticAttributes.HTTP_URL);
-    if (httpUrl != null) {
-      data.setUrl(httpUrl);
-    }
-
-    String name = getTelemetryName(span);
-    data.setName(name);
-    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_NAME.toString(), name);
-
-    data.setId(span.getSpanId());
-    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), span.getTraceId());
-
-    // see behavior specified at https://github.com/microsoft/ApplicationInsights-Java/issues/1174
-    String aiLegacyParentId = span.getAttributes().get(AI_LEGACY_PARENT_ID_KEY);
-    if (aiLegacyParentId != null) {
-      // this was the real (legacy) parent id, but it didn't fit span id format
-      telemetry.getTags().put(ContextTagKeys.AI_OPERATION_PARENT_ID.toString(), aiLegacyParentId);
-    } else if (span.getParentSpanContext().isValid()) {
-      telemetry
-          .getTags()
-          .put(
-              ContextTagKeys.AI_OPERATION_PARENT_ID.toString(),
-              span.getParentSpanContext().getSpanId());
-    }
-    String aiLegacyRootId = span.getAttributes().get(AI_LEGACY_ROOT_ID_KEY);
-    if (aiLegacyRootId != null) {
-      telemetry.getTags().put("ai_legacyRootID", aiLegacyRootId);
-    }
-
-    String locationIp = attributes.get(SemanticAttributes.HTTP_CLIENT_IP);
-    if (locationIp == null) {
-      // only use net.peer.ip if http.client_ip is not available
-      locationIp = attributes.get(SemanticAttributes.NET_PEER_IP);
-    }
-    if (locationIp != null) {
-      telemetry.getTags().put(ContextTagKeys.AI_LOCATION_IP.toString(), locationIp);
-    }
-
-    long startEpochNanos = span.getStartEpochNanos();
-    telemetry.setTime(FormattedTime.fromEpochNanos(startEpochNanos));
-
-    data.setDuration(FormattedDuration.fromNanos(span.getEndEpochNanos() - startEpochNanos));
-
-    data.setSuccess(span.getStatus().getStatusCode() != StatusCode.ERROR);
-
-    setExtraAttributes(telemetry, data, attributes);
-
-    float samplingPercentage = getSamplingPercentage(span.getSpanContext().getTraceState());
-    telemetry.setSampleRate(samplingPercentage);
+    // export
     telemetryClient.trackAsync(telemetry);
     exportEvents(span, samplingPercentage);
   }
@@ -749,42 +743,60 @@ public class Exporter implements SpanExporter {
         continue;
       }
 
-      TelemetryItem telemetry = new TelemetryItem();
-      TelemetryEventData data = new TelemetryEventData();
-      telemetryClient.initEventTelemetry(telemetry, data);
-
-      String operationId = span.getTraceId();
-      telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), operationId);
-      telemetry.getTags().put(ContextTagKeys.AI_OPERATION_PARENT_ID.toString(), span.getSpanId());
-      telemetry.setTime(FormattedTime.fromEpochNanos(event.getEpochNanos()));
-      setExtraAttributes(telemetry, data, event.getAttributes());
-
       if (event.getAttributes().get(SemanticAttributes.EXCEPTION_TYPE) != null
           || event.getAttributes().get(SemanticAttributes.EXCEPTION_MESSAGE) != null) {
         // TODO map OpenTelemetry exception to Application Insights exception better
         String stacktrace = event.getAttributes().get(SemanticAttributes.EXCEPTION_STACKTRACE);
         if (stacktrace != null) {
-          trackException(stacktrace, span, operationId, span.getSpanId(), samplingPercentage);
+          trackException(stacktrace, span, samplingPercentage);
         }
-      } else {
-        telemetry.setSampleRate(samplingPercentage);
-        telemetryClient.trackAsync(telemetry);
+        return;
       }
+
+      TelemetryItem telemetry = new TelemetryItem();
+      TelemetryEventData data = new TelemetryEventData();
+      telemetryClient.initEventTelemetry(telemetry, data);
+
+      // set common properties
+      setOperationTags(telemetry, span.getTraceId(), span.getSpanId(), span.getAttributes());
+      setTime(telemetry, event.getEpochNanos());
+      setExtraAttributes(telemetry, data, event.getAttributes());
+      setSampleRate(telemetry, samplingPercentage);
+
+      telemetryClient.trackAsync(telemetry);
     }
   }
 
-  private void trackException(
-      String errorStack, SpanData span, String operationId, String id, float samplingPercentage) {
+  private void trackException(String errorStack, SpanData span, float samplingPercentage) {
     TelemetryItem telemetry = new TelemetryItem();
     TelemetryExceptionData data = new TelemetryExceptionData();
     telemetryClient.initExceptionTelemetry(telemetry, data);
 
-    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_ID.toString(), operationId);
-    telemetry.getTags().put(ContextTagKeys.AI_OPERATION_PARENT_ID.toString(), id);
-    telemetry.setTime(FormattedTime.fromEpochNanos(span.getEndEpochNanos()));
-    telemetry.setSampleRate(samplingPercentage);
+    // common properties
+    setOperationTags(telemetry, span.getTraceId(), span.getSpanId(), span.getAttributes());
+    setTime(telemetry, span.getEndEpochNanos());
+    setSampleRate(telemetry, samplingPercentage);
+
+    // exception-specific properties
     data.setExceptions(minimalParse(errorStack));
+
     telemetryClient.trackAsync(telemetry);
+  }
+
+  private static void setTime(TelemetryItem telemetry, long epochNanos) {
+    telemetry.setTime(FormattedTime.fromEpochNanos(epochNanos));
+  }
+
+  private static void setSampleRate(TelemetryItem telemetry, SpanData span) {
+    setSampleRate(telemetry, getSamplingPercentage(span.getSpanContext().getTraceState()));
+  }
+
+  private static void setSampleRate(TelemetryItem telemetry, float samplingPercentage) {
+    telemetry.setSampleRate(samplingPercentage);
+  }
+
+  private static float getSamplingPercentage(TraceState traceState) {
+    return TelemetryUtil.getSamplingPercentage(traceState, 100, true);
   }
 
   private static void addLinks(MonitorDomain data, List<LinkData> links) {
