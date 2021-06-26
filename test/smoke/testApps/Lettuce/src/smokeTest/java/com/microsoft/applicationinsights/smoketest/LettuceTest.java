@@ -80,6 +80,6 @@ public class LettuceTest extends AiSmokeTest {
     assertEquals(rd.getId(), childEnvelope.getTags().get("ai.operation.parentId"));
 
     assertEquals(operationName, rdEnvelope.getTags().get("ai.operation.name"));
-    assertNull(childEnvelope.getTags().get("ai.operation.name"));
+    assertEquals(operationName, childEnvelope.getTags().get("ai.operation.name"));
   }
 }
