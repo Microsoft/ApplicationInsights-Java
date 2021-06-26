@@ -35,6 +35,7 @@ import com.azure.monitor.opentelemetry.exporter.implementation.models.TelemetryE
 import com.azure.monitor.opentelemetry.exporter.implementation.models.TelemetryItem;
 import com.microsoft.applicationinsights.agent.bootstrap.BytecodeUtil.BytecodeUtilDelegate;
 import com.microsoft.applicationinsights.agent.internal.common.Strings;
+import com.microsoft.applicationinsights.agent.internal.init.AiOperationNameSpanProcessor;
 import com.microsoft.applicationinsights.agent.internal.legacyheaders.AiLegacyPropagator;
 import com.microsoft.applicationinsights.agent.internal.sampling.SamplingScoreGeneratorV2;
 import com.microsoft.applicationinsights.agent.internal.telemetry.FormattedDuration;
@@ -43,6 +44,9 @@ import com.microsoft.applicationinsights.agent.internal.telemetry.TelemetryClien
 import com.microsoft.applicationinsights.agent.internal.telemetry.TelemetryUtil;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.instrumentation.api.tracer.ServerSpan;
+import io.opentelemetry.sdk.trace.ReadableSpan;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -473,6 +477,17 @@ public class BytecodeUtilImpl implements BytecodeUtilDelegate {
       telemetry
           .getTags()
           .put(ContextTagKeys.AI_OPERATION_PARENT_ID.toString(), spanContext.getSpanId());
+    }
+
+    if (!telemetry.getTags().containsKey(ContextTagKeys.AI_OPERATION_NAME.toString())) {
+      Span serverSpan = ServerSpan.fromContextOrNull(Context.current());
+      if (serverSpan instanceof ReadableSpan) {
+        telemetry
+            .getTags()
+            .put(
+                ContextTagKeys.AI_OPERATION_NAME.toString(),
+                AiOperationNameSpanProcessor.getOperationName((ReadableSpan) serverSpan));
+      }
     }
 
     float samplingPercentage =
