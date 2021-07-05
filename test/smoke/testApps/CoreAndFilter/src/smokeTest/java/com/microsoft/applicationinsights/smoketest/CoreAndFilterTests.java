@@ -514,15 +514,6 @@ public class CoreAndFilterTests extends AiSmokeTest {
 
   private static void assertParentChild(
       RequestData rd, Envelope rdEnvelope, Envelope childEnvelope, String operationName) {
-    assertParentChild(rd, rdEnvelope, childEnvelope, operationName, null);
-  }
-
-  private static void assertParentChild(
-      RequestData rd,
-      Envelope rdEnvelope,
-      Envelope childEnvelope,
-      String operationName,
-      String childOperationName) {
     String operationId = rdEnvelope.getTags().get("ai.operation.id");
     assertNotNull(operationId);
     assertEquals(operationId, childEnvelope.getTags().get("ai.operation.id"));
@@ -533,6 +524,6 @@ public class CoreAndFilterTests extends AiSmokeTest {
     assertEquals(rd.getId(), childEnvelope.getTags().get("ai.operation.parentId"));
 
     assertEquals(operationName, rdEnvelope.getTags().get("ai.operation.name"));
-    assertEquals(childOperationName, childEnvelope.getTags().get("ai.operation.name"));
+    assertEquals(operationName, childEnvelope.getTags().get("ai.operation.name"));
   }
 }
