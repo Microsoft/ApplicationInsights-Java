@@ -49,4 +49,19 @@ public final class Strings {
   }
 
   private Strings() {}
+
+  public static String trimAndTruncate(String str, int maxLength) {
+    if (str != null) {
+      str = str.trim();
+      str = truncate(str, maxLength);
+    }
+    return str;
+  }
+
+  public static String truncate(String str, int maxLength) {
+    if (str != null) {
+      return str.substring(0, Math.min(str.length(), maxLength));
+    }
+    return null;
+  }
 }

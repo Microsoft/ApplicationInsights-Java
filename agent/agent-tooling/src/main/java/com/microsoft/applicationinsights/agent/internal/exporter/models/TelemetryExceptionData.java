@@ -23,6 +23,8 @@ package com.microsoft.applicationinsights.agent.internal.exporter.models;
 
 import com.azure.core.annotation.Fluent;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.microsoft.applicationinsights.agent.internal.common.Strings;
+import com.microsoft.applicationinsights.agent.internal.exporter.utils.SanitizationHelper;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +34,7 @@ import java.util.Map;
  */
 @Fluent
 public final class TelemetryExceptionData extends MonitorDomain {
+  private static final int MAX_PROBLEM_ID_LENGTH = 1024;
   /*
    * Exception chain - list of inner exceptions.
    */
@@ -127,7 +130,7 @@ public final class TelemetryExceptionData extends MonitorDomain {
    * @return the TelemetryExceptionData object itself.
    */
   public TelemetryExceptionData setProblemId(String problemId) {
-    this.problemId = problemId;
+    this.problemId = Strings.trimAndTruncate(problemId, MAX_PROBLEM_ID_LENGTH);
     return this;
   }
 
@@ -147,7 +150,7 @@ public final class TelemetryExceptionData extends MonitorDomain {
    * @return the TelemetryExceptionData object itself.
    */
   public TelemetryExceptionData setProperties(Map<String, String> properties) {
-    this.properties = properties;
+    this.properties = SanitizationHelper.sanitizeProperties(properties);
     return this;
   }
 
@@ -167,7 +170,7 @@ public final class TelemetryExceptionData extends MonitorDomain {
    * @return the TelemetryExceptionData object itself.
    */
   public TelemetryExceptionData setMeasurements(Map<String, Double> measurements) {
-    this.measurements = measurements;
+    this.measurements = SanitizationHelper.sanitizeMeasurements(measurements);
     return this;
   }
 }

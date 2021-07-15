@@ -23,6 +23,7 @@ package com.microsoft.applicationinsights.agent.internal.exporter.models;
 
 import com.azure.core.annotation.Fluent;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.microsoft.applicationinsights.agent.internal.exporter.utils.SanitizationHelper;
 import java.util.List;
 import java.util.Map;
 
@@ -86,7 +87,7 @@ public final class MetricsData extends MonitorDomain {
    * @return the MetricsData object itself.
    */
   public MetricsData setProperties(Map<String, String> properties) {
-    this.properties = properties;
+    this.properties = SanitizationHelper.sanitizeProperties(properties);
     return this;
   }
 }

@@ -122,8 +122,6 @@ public class JdbcTest extends AiSmokeTest {
     assertParentChild(rd, rdEnvelope, rddEnvelope, "GET /Jdbc/*");
   }
 
-  // FIXME (trask)
-  @Ignore
   @Test
   @TargetUri("/hsqldbLargeStatement")
   public void hsqldbLargeStatement() throws Exception {

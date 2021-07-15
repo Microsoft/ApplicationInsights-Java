@@ -23,6 +23,8 @@ package com.microsoft.applicationinsights.agent.internal.exporter.models;
 
 import com.azure.core.annotation.Fluent;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.microsoft.applicationinsights.agent.internal.common.Strings;
+import com.microsoft.applicationinsights.agent.internal.exporter.utils.SanitizationHelper;
 import java.util.Map;
 
 /**
@@ -97,7 +99,7 @@ public final class PageViewData extends MonitorDomain {
    * @return the PageViewData object itself.
    */
   public PageViewData setId(String id) {
-    this.id = id;
+    this.id = Strings.trimAndTruncate(id, SanitizationHelper.MAX_ID_LENGTH);
     return this;
   }
 
@@ -119,7 +121,7 @@ public final class PageViewData extends MonitorDomain {
    * @return the PageViewData object itself.
    */
   public PageViewData setName(String name) {
-    this.name = name;
+    this.name = Strings.trimAndTruncate(name, SanitizationHelper.MAX_NAME_LENGTH);
     return this;
   }
 
@@ -139,7 +141,7 @@ public final class PageViewData extends MonitorDomain {
    * @return the PageViewData object itself.
    */
   public PageViewData setUrl(String url) {
-    this.url = url;
+    this.url = Strings.trimAndTruncate(url, SanitizationHelper.MAX_URL_LENGTH);
     return this;
   }
 
@@ -185,7 +187,7 @@ public final class PageViewData extends MonitorDomain {
    * @return the PageViewData object itself.
    */
   public PageViewData setReferredUri(String referredUri) {
-    this.referredUri = referredUri;
+    this.referredUri = Strings.trimAndTruncate(referredUri, SanitizationHelper.MAX_URL_LENGTH);
     return this;
   }
 
@@ -205,7 +207,7 @@ public final class PageViewData extends MonitorDomain {
    * @return the PageViewData object itself.
    */
   public PageViewData setProperties(Map<String, String> properties) {
-    this.properties = properties;
+    this.properties = SanitizationHelper.sanitizeProperties(properties);
     return this;
   }
 
@@ -225,7 +227,7 @@ public final class PageViewData extends MonitorDomain {
    * @return the PageViewData object itself.
    */
   public PageViewData setMeasurements(Map<String, Double> measurements) {
-    this.measurements = measurements;
+    this.measurements = SanitizationHelper.sanitizeMeasurements(measurements);
     return this;
   }
 }

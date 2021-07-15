@@ -23,6 +23,8 @@ package com.microsoft.applicationinsights.agent.internal.exporter.models;
 
 import com.azure.core.annotation.Fluent;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.microsoft.applicationinsights.agent.internal.common.Strings;
+import com.microsoft.applicationinsights.agent.internal.exporter.utils.SanitizationHelper;
 import java.util.Map;
 
 /**
@@ -72,7 +74,7 @@ public final class MessageData extends MonitorDomain {
    * @return the MessageData object itself.
    */
   public MessageData setMessage(String message) {
-    this.message = message;
+    this.message = Strings.trimAndTruncate(message, SanitizationHelper.MAX_MESSAGE_LENGTH);
     return this;
   }
 
@@ -112,7 +114,7 @@ public final class MessageData extends MonitorDomain {
    * @return the MessageData object itself.
    */
   public MessageData setProperties(Map<String, String> properties) {
-    this.properties = properties;
+    this.properties = SanitizationHelper.sanitizeProperties(properties);
     return this;
   }
 
@@ -132,7 +134,7 @@ public final class MessageData extends MonitorDomain {
    * @return the MessageData object itself.
    */
   public MessageData setMeasurements(Map<String, Double> measurements) {
-    this.measurements = measurements;
+    this.measurements = SanitizationHelper.sanitizeMeasurements(measurements);
     return this;
   }
 }
