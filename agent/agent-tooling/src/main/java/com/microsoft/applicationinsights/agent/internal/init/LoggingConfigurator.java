@@ -90,17 +90,20 @@ public class LoggingConfigurator {
     rootLogger.addAppender(configureFileAppender());
     rootLogger.addAppender(configureConsoleAppender());
 
-    // Diagnostics IPA log file location. Disabled by default.
+    // App Services linux environments set this environment variable to control where the internal
+    // diagnostic log is written, so that App Services can consume that file and send those logging
+    // events to an internal kusto store for internal alerting and diagnostics
     String diagnosticsOutputDirectory =
         System.getenv(DiagnosticsHelper.APPLICATIONINSIGHTS_DIAGNOSTICS_OUTPUT_DIRECTORY);
     if (diagnosticsOutputDirectory != null && !diagnosticsOutputDirectory.isEmpty()) {
       rootLogger.addAppender(configureDiagnosticAppender(diagnosticsOutputDirectory));
     }
 
+    // App Services windows environments use ETW to consume internal diagnostics logging events and
+    // to send those logging events to an internal kusto store for internal alerting and diagnostics
     if (DiagnosticsHelper.isOsWindows()) {
       rootLogger.addAppender(configureEtwAppender());
     }
-    // TODO what about linux?
 
     configureLoggingLevels();
   }

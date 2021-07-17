@@ -195,7 +195,7 @@ public abstract class AiSmokeTest {
 
   // region: options
   public static final int APPLICATION_READY_TIMEOUT_SECONDS = 120;
-  public static final int TELEMETRY_RECEIVE_TIMEOUT_SECONDS = 30;
+  public static final int TELEMETRY_RECEIVE_TIMEOUT_SECONDS = 60;
   public static final int DELAY_AFTER_CONTAINER_STOP_MILLISECONDS = 1500;
   public static final int HEALTH_CHECK_RETRIES = 2;
   public static final int APPSERVER_HEALTH_CHECK_TIMEOUT = 75;
